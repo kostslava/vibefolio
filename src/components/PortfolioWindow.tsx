@@ -29,25 +29,21 @@ export default function PortfolioWindow({
   const [profileExpanded, setProfileExpanded] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
-  const [initialized, setInitialized] = useState(false);
 
-  // Initialize position and size separately to avoid hook issues
-  const [position, setPosition] = useState({ x: 0, y: 0 });
-  const [size, setSize] = useState({ width: 480, height: 520 });
-
-  const windowRef = useRef<HTMLDivElement>(null);
-  const dragOffset = useRef({ x: 0, y: 0 });
-
-  // Center window on mount
-  useEffect(() => {
+  // Initialize position with random offset from center
+  const [position, setPosition] = useState(() => {
+    if (typeof window === 'undefined') return { x: 100, y: 100 };
     const vw = window.innerWidth;
     const vh = window.innerHeight;
     const initialX = Math.max(20, (vw - 480) / 2 + (Math.random() - 0.5) * 80);
     const initialY = Math.max(20, (vh - 520) / 2 + (Math.random() - 0.5) * 60);
-    
-    setPosition({ x: initialX, y: initialY });
-    setInitialized(true);
-  }, []);
+    return { x: initialX, y: initialY };
+  });
+  
+  const [size, setSize] = useState({ width: 480, height: 520 });
+
+  const windowRef = useRef<HTMLDivElement>(null);
+  const dragOffset = useRef({ x: 0, y: 0 });
 
   // Drag handlers
   const handleMouseDownDrag = useCallback(
@@ -114,8 +110,6 @@ export default function PortfolioWindow({
 
   const projects =
     activeTab === "current" ? person.currentProjects : person.pastProjects;
-
-  if (!initialized) return null;
 
   return (
     <div
