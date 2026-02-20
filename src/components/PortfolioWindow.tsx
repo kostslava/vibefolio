@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import { Person } from "@/lib/types";
-import ProjectCard from "./ProjectCard";
+import ProjectCard from "@/components/ProjectCard";
 
 interface PortfolioWindowProps {
   person: Person;
