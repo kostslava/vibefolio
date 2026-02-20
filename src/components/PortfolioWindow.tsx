@@ -21,6 +21,10 @@ function getInitials(name: string): string {
     .toUpperCase();
 }
 
+const redCursor = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16'%3E%3Ccircle cx='6' cy='6' r='5' fill='%23ff5f57' stroke='%23993b37' stroke-width='1.2'/%3E%3C/svg%3E") 6 6, pointer`;
+const yellowCursor = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16'%3E%3Ccircle cx='6' cy='6' r='5' fill='%23febc2e' stroke='%23a07800' stroke-width='1.2'/%3E%3C/svg%3E") 6 6, pointer`;
+const greenCursor = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16'%3E%3Ccircle cx='6' cy='6' r='5' fill='%2328c840' stroke='%23107a22' stroke-width='1.2'/%3E%3C/svg%3E") 6 6, pointer`;
+
 export default function PortfolioWindow({
   person,
   onClose,
@@ -165,7 +169,7 @@ export default function PortfolioWindow({
     >
       {/* Title bar - draggable */}
       <div
-        className="flex items-center justify-between px-5 py-3 cursor-move shrink-0"
+        className="flex items-center px-5 py-3 cursor-move shrink-0 relative"
         style={{
           background: "#c0d0e0",
           borderBottom: "1.5px solid #a0b4c8",
@@ -173,12 +177,12 @@ export default function PortfolioWindow({
         onMouseDown={handleMouseDownDrag}
       >
         {/* macOS traffic lights */}
-        <div className="flex items-center gap-1.5 shrink-0">
+        <div className="flex items-center gap-1.5 shrink-0 z-10">
           {/* Red — close */}
           <button
             onClick={onClose}
-            className="group w-3.5 h-3.5 rounded-full flex items-center justify-center transition-opacity duration-150 cursor-pointer"
-            style={{ background: "#ff5f57" }}
+            className="group w-3.5 h-3.5 rounded-full flex items-center justify-center transition-opacity duration-150"
+            style={{ background: "#ff5f57", cursor: redCursor }}
             title="Close"
           >
             <svg
@@ -193,8 +197,8 @@ export default function PortfolioWindow({
           </button>
           {/* Yellow — no-op */}
           <button
-            className="group w-3.5 h-3.5 rounded-full flex items-center justify-center cursor-default"
-            style={{ background: "#febc2e" }}
+            className="group w-3.5 h-3.5 rounded-full flex items-center justify-center"
+            style={{ background: "#febc2e", cursor: yellowCursor }}
             title="Minimize (not available)"
           >
             <svg
@@ -209,8 +213,8 @@ export default function PortfolioWindow({
           </button>
           {/* Green — no-op */}
           <button
-            className="group w-3.5 h-3.5 rounded-full flex items-center justify-center cursor-default"
-            style={{ background: "#28c840" }}
+            className="group w-3.5 h-3.5 rounded-full flex items-center justify-center"
+            style={{ background: "#28c840", cursor: greenCursor }}
             title="Full screen (not available)"
           >
             <svg
@@ -225,23 +229,26 @@ export default function PortfolioWindow({
           </button>
         </div>
 
-        <div className="flex items-center gap-2 flex-1 min-w-0">
-          <div
-            className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
-            style={{
-              background: "#ffffff",
-              border: "1.5px solid #8aa0b8",
-              color: "#4a6a8a",
-            }}
-          >
-            {getInitials(person.name)}
+        {/* Centered name — absolutely positioned so it's truly centred */}
+        <div className="absolute inset-x-0 flex justify-center items-center pointer-events-none">
+          <div className="flex items-center gap-2">
+            <div
+              className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
+              style={{
+                background: "#ffffff",
+                border: "1.5px solid #8aa0b8",
+                color: "#4a6a8a",
+              }}
+            >
+              {getInitials(person.name)}
+            </div>
+            <h3
+              className="font-semibold text-sm"
+              style={{ color: "#2a4a6a" }}
+            >
+              {person.name}
+            </h3>
           </div>
-          <h3
-            className="font-semibold text-sm truncate"
-            style={{ color: "#2a4a6a" }}
-          >
-            {person.name}
-          </h3>
         </div>
       </div>
 
@@ -369,7 +376,7 @@ export default function PortfolioWindow({
             zIndex: activeTab === "current" ? 1 : 0,
           }}
         >
-          Current Projects
+          Current ({person.currentProjects.length})
         </button>
         <button
           onClick={() => setActiveTab("past")}
@@ -387,7 +394,7 @@ export default function PortfolioWindow({
             zIndex: activeTab === "past" ? 1 : 0,
           }}
         >
-          Old Projects
+          Past ({person.pastProjects.length})
         </button>
       </div>
 
