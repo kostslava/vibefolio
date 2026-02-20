@@ -5,9 +5,9 @@ export const people: Person[] = [
     id: "1",
     name: "Slava Kostrubin",
     photo: "",
-    bio: "Full-stack builder obsessed with crafting experiences that feel alive. Making the web weird and wonderful.",
+    bio: "Full-stack developer passionate about building interactive web experiences. I have multiple projects under my belt, including websites, games, ",
     socials: [
-      { label: "GitHub", url: "https://github.com/slavakost", icon: "github" },
+      { label: "GitHub", url: "https://github.com/kostslava", icon: "github" },
       { label: "LinkedIn", url: "https://linkedin.com/in/slavakost", icon: "linkedin" },
       { label: "Twitter", url: "https://twitter.com/slavakost", icon: "twitter" },
     ],
