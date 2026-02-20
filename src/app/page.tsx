@@ -1,49 +1,89 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useRef } from "react";
 import Header from "@/components/Header";
-import PersonCard from "@/components/PersonCard";
+import SearchLauncher from "@/components/SearchLauncher";
+import PortfolioWindow from "@/components/PortfolioWindow";
+import ProjectWindow from "@/components/ProjectWindow";
 import AboutPage from "@/components/AboutPage";
 import IntroExperience from "@/components/IntroExperience";
-import { people } from "@/lib/data";
+import { Person } from "@/lib/types";
 
-// Compute initial grid positions for person cards (3-column layout, below header)
-const COLS = 3;
-const CARD_WIDTH = 240;
-const CARD_GAP = 28;
-const START_X = 40;
-const START_Y = 96;
+interface PortfolioEntry {
+  person: Person;
+  key: number;
+  zIndex: number;
+}
 
-const initialPositions = people.map((_, i) => ({
-  x: START_X + (i % COLS) * (CARD_WIDTH + CARD_GAP),
-  y: START_Y + Math.floor(i / COLS) * 110,
-}));
+interface ProjectEntry {
+  url: string;
+  title: string;
+  key: number;
+  zIndex: number;
+}
 
-const BASE_Z = 100;
+const BASE_Z = 200;
 
 export default function Home() {
   const [showIntro, setShowIntro] = useState(true);
   const [activeTab, setActiveTab] = useState<"projects" | "about">("projects");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [zIndexes, setZIndexes] = useState<Record<string, number>>(() =>
-    Object.fromEntries(people.map((p, i) => [p.id, BASE_Z + i]))
-  );
+  const [openPortfolios, setOpenPortfolios] = useState<PortfolioEntry[]>([]);
+  const [openProjects, setOpenProjects] = useState<ProjectEntry[]>([]);
+  const [zCounter, setZCounter] = useState(BASE_Z);
+  const keyCounter = useRef(0);
 
-  const visibleIds = useMemo(() => {
-    if (!searchQuery.trim()) return null; // null means show all
-    const q = searchQuery.toLowerCase();
-    return new Set(
-      people
-        .filter((p) => p.name.toLowerCase().includes(q) || p.bio.toLowerCase().includes(q))
-        .map((p) => p.id)
+  const nextZ = () => {
+    const next = zCounter + 1;
+    setZCounter(next);
+    return next;
+  };
+
+  const handleOpenPortfolio = (person: Person) => {
+    // If already open, bring to front
+    const existing = openPortfolios.find((p) => p.person.id === person.id);
+    if (existing) {
+      const z = zCounter + 1;
+      setZCounter(z);
+      setOpenPortfolios((prev) =>
+        prev.map((p) => (p.key === existing.key ? { ...p, zIndex: z } : p))
+      );
+      return;
+    }
+    const key = ++keyCounter.current;
+    const z = zCounter + 1;
+    setZCounter(z);
+    setOpenPortfolios((prev) => [...prev, { person, key, zIndex: z }]);
+  };
+
+  const handleClosePortfolio = (key: number) => {
+    setOpenPortfolios((prev) => prev.filter((p) => p.key !== key));
+  };
+
+  const handleFocusPortfolio = (key: number) => {
+    const z = zCounter + 1;
+    setZCounter(z);
+    setOpenPortfolios((prev) =>
+      prev.map((p) => (p.key === key ? { ...p, zIndex: z } : p))
     );
-  }, [searchQuery]);
+  };
 
-  const handleFocus = (personId: string) => {
-    setZIndexes((prev) => {
-      const max = Math.max(...Object.values(prev));
-      return { ...prev, [personId]: max + 1 };
-    });
+  const handleOpenProject = (url: string, title: string) => {
+    const key = ++keyCounter.current;
+    const z = zCounter + 1;
+    setZCounter(z);
+    setOpenProjects((prev) => [...prev, { url, title, key, zIndex: z }]);
+  };
+
+  const handleCloseProject = (key: number) => {
+    setOpenProjects((prev) => prev.filter((p) => p.key !== key));
+  };
+
+  const handleFocusProject = (key: number) => {
+    const z = zCounter + 1;
+    setZCounter(z);
+    setOpenProjects((prev) =>
+      prev.map((p) => (p.key === key ? { ...p, zIndex: z } : p))
+    );
   };
 
   if (showIntro) {
@@ -52,40 +92,34 @@ export default function Home() {
 
   return (
     <div className="min-h-screen">
-      <Header
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-      />
+      <Header activeTab={activeTab} onTabChange={setActiveTab} />
 
       {activeTab === "projects" ? (
         <>
-          {/* Search results notice */}
-          {searchQuery.trim() && visibleIds && (
-            <div
-              className="fixed top-20 left-1/2 -translate-x-1/2 z-[200] px-4 py-2 rounded-xl text-sm shadow"
-              style={{
-                background: "#c8d8e8",
-                border: "1.5px solid #a0b4c8",
-                color: "#4a6a8a",
-              }}
-            >
-              {visibleIds.size === 0
-                ? `No people found for "${searchQuery}"`
-                : `Showing ${visibleIds.size} of ${people.length} people`}
-            </div>
-          )}
+          {/* Central search launcher */}
+          <SearchLauncher onOpenPortfolio={handleOpenPortfolio} />
 
-          {people.map((person, index) => (
-            <PersonCard
-              key={person.id}
-              person={person}
-              initialX={initialPositions[index].x}
-              initialY={initialPositions[index].y}
-              zIndex={zIndexes[person.id]}
-              onFocus={() => handleFocus(person.id)}
-              isHidden={visibleIds !== null && !visibleIds.has(person.id)}
+          {/* Open portfolio windows */}
+          {openPortfolios.map((entry) => (
+            <PortfolioWindow
+              key={entry.key}
+              person={entry.person}
+              zIndex={entry.zIndex}
+              onClose={() => handleClosePortfolio(entry.key)}
+              onFocus={() => handleFocusPortfolio(entry.key)}
+              onOpenProject={handleOpenProject}
+            />
+          ))}
+
+          {/* Open project windows */}
+          {openProjects.map((entry) => (
+            <ProjectWindow
+              key={entry.key}
+              url={entry.url}
+              title={entry.title}
+              zIndex={entry.zIndex}
+              onClose={() => handleCloseProject(entry.key)}
+              onFocus={() => handleFocusProject(entry.key)}
             />
           ))}
         </>
@@ -95,3 +129,4 @@ export default function Home() {
     </div>
   );
 }
+
