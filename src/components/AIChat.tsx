@@ -1,17 +1,10 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef } from "react";
 import { Person } from "@/lib/types";
 
 interface AIChatProps {
   person: Person;
-}
-
-interface Message {
-  id: number;
-  role: "user" | "assistant";
-  text: string; // empty string for audio-only assistant messages
-  audioOnly?: boolean;
 }
 
 /** Build a rich system prompt from the person's portfolio data */
@@ -33,9 +26,14 @@ function buildSystemContext(person: Person): string {
           .join("\n")
       : "  None listed";
 
+  const socialList =
+    person.socials.length > 0
+      ? person.socials.map((s) => `  • ${s.label}: ${s.url}`).join("\n")
+      : "  None listed";
+
   return `You are a friendly AI assistant embedded inside ${person.name}'s developer portfolio. \
 Answer questions about ${person.name} based only on the information below. \
-Be concise, warm, and conversational — as if you're their hype person. \
+Be concise, warm, and conversational — as if you're their hype person. Keep answers short (2-4 sentences max). \
 Do not make up details not supported by the data. \
 If asked about skills, infer them naturally from the bio and projects.
 
@@ -46,7 +44,10 @@ Current projects:
 ${currentList}
 
 Past projects:
-${pastList}`.trim();
+${pastList}
+
+Socials / Contact:
+${socialList}`.trim();
 }
 
 /** Waveform animation shown while audio is playing */
@@ -74,38 +75,54 @@ function Waveform() {
   );
 }
 
+const PRESET_BUTTONS = [
+  {
+    id: "who",
+    label: "Who is this?",
+    icon: "👤",
+    prompt: (name: string) =>
+      `Give a brief, friendly intro of who ${name} is and what they're all about. Keep it punchy, 2-3 sentences.`,
+  },
+  {
+    id: "experience",
+    label: "Their experience",
+    icon: "💼",
+    prompt: (name: string) =>
+      `Tell me about ${name}'s projects and experience — what have they built and what are they working on now? Keep it to 2-3 sentences.`,
+  },
+  {
+    id: "contact",
+    label: "Contact info",
+    icon: "📬",
+    prompt: (name: string) =>
+      `How can I reach ${name}? Give me their contact info and social links in a quick sentence or two.`,
+  },
+  {
+    id: "help",
+    label: "How can they help?",
+    icon: "🚀",
+    prompt: (name: string) =>
+      `What can ${name} help me with? What skills and value do they bring? Keep it short and punchy.`,
+  },
+];
+
 export default function AIChat({ person }: AIChatProps) {
   const [open, setOpen] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState("");
+  const [activeId, setActiveId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [playing, setPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const msgIdRef = useRef(0);
-  const messagesEndRef = useRef<HTMLDivElement | null>(null);
-  const inputRef = useRef<HTMLInputElement | null>(null);
 
-  // Scroll to bottom whenever messages change
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, loading]);
+  const firstName = person.name.split(" ")[0];
 
-  // Focus input when drawer opens
-  useEffect(() => {
-    if (open) setTimeout(() => inputRef.current?.focus(), 150);
-  }, [open]);
-
-  const sendMessage = async () => {
-    const question = input.trim();
-    if (!question || loading) return;
-    setInput("");
-
-    const userMsg: Message = {
-      id: ++msgIdRef.current,
-      role: "user",
-      text: question,
-    };
-    setMessages((prev) => [...prev, userMsg]);
+  const handlePreset = async (btn: (typeof PRESET_BUTTONS)[number]) => {
+    if (loading) return;
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.src = "";
+    }
+    setPlaying(false);
+    setActiveId(btn.id);
     setLoading(true);
 
     try {
@@ -113,22 +130,13 @@ export default function AIChat({ person }: AIChatProps) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          question,
+          question: btn.prompt(person.name),
           systemContext: buildSystemContext(person),
         }),
       });
 
       const data = await res.json();
       if (data.error) throw new Error(data.error);
-
-      const aiMsg: Message = {
-        id: ++msgIdRef.current,
-        role: "assistant",
-        text: "",
-        audioOnly: true,
-      };
-      setMessages((prev) => [...prev, aiMsg]);
-      const aiMsgId = aiMsg.id;
 
       if (data.audioBase64) {
         const bytes = Uint8Array.from(atob(data.audioBase64), (c) =>
@@ -143,10 +151,6 @@ export default function AIChat({ person }: AIChatProps) {
         audioRef.current.onended = () => {
           setPlaying(false);
           URL.revokeObjectURL(url);
-          // Mark the message as done playing
-          setMessages((prev) =>
-            prev.map((m) => (m.id === aiMsgId ? { ...m, audioOnly: false, text: "✓" } : m))
-          );
         };
         audioRef.current.onerror = () => {
           setPlaying(false);
@@ -154,19 +158,12 @@ export default function AIChat({ person }: AIChatProps) {
         };
         audioRef.current.play().catch(() => setPlaying(false));
       }
-    } catch (err: unknown) {
-      const errMsg: Message = {
-        id: ++msgIdRef.current,
-        role: "assistant",
-        text: err instanceof Error ? `Error: ${err.message}` : "Something went wrong.",
-      };
-      setMessages((prev) => [...prev, errMsg]);
+    } catch {
+      // silently fail
     } finally {
       setLoading(false);
     }
   };
-
-  const firstName = person.name.split(" ")[0];
 
   return (
     <>
@@ -181,7 +178,6 @@ export default function AIChat({ person }: AIChatProps) {
           color: "#2a4a6a",
         }}
       >
-        {/* Sparkles icon */}
         <svg
           width="13"
           height="13"
@@ -209,123 +205,45 @@ export default function AIChat({ person }: AIChatProps) {
         </svg>
       </button>
 
-      {/* ── Chat drawer ───────────────────────────────────────────── */}
+      {/* ── Button panel ──────────────────────────────────────────── */}
       <div
-        className="shrink-0 flex flex-col overflow-hidden transition-all duration-300 ease-in-out"
+        className="shrink-0 overflow-hidden transition-all duration-300 ease-in-out"
         style={{
-          maxHeight: open ? "260px" : "0px",
+          maxHeight: open ? "180px" : "0px",
           opacity: open ? 1 : 0,
           background: "#d0dcea",
           borderBottom: open ? "1px solid #a0b4c8" : "none",
         }}
       >
-        {/* Messages area */}
-        <div
-          className="flex-1 overflow-y-auto px-4 py-3 flex flex-col gap-2"
-          style={{ minHeight: 0, maxHeight: 190 }}
-        >
-          {messages.length === 0 && !loading && (
-            <p
-              className="text-xs text-center py-2"
-              style={{ color: "#7a94a8" }}
-            >
-              Ask anything about {person.name} ✦
-            </p>
-          )}
+        <div className="px-3 py-3 flex flex-col gap-2">
+          {PRESET_BUTTONS.map((btn) => {
+            const isActive = activeId === btn.id;
+            const isThisLoading = isActive && loading;
+            const isThisPlaying = isActive && playing;
 
-          {messages.map((m) => (
-            <div
-              key={m.id}
-              className="text-xs rounded-xl px-3 py-2 max-w-[88%] leading-relaxed flex items-center gap-1.5"
-              style={{
-                alignSelf: m.role === "user" ? "flex-end" : "flex-start",
-                background: m.role === "user" ? "#3a7ab8" : "#e8f0f8",
-                color: m.role === "user" ? "#fff" : "#2a4a6a",
-                border: m.role === "assistant" ? "1px solid #b4c8dc" : "none",
-              }}
-            >
-              {m.audioOnly ? (
-                <>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/>
-                  </svg>
-                  <Waveform />
-                </>
-              ) : (
-                m.text
-              )}
-            </div>
-          ))}
-
-          {loading && (
-            <div
-              className="text-xs rounded-xl px-3 py-2 self-start"
-              style={{
-                background: "#e8f0f8",
-                color: "#6b8dad",
-                border: "1px solid #b4c8dc",
-              }}
-            >
-              {playing ? (
-                <>
-                  Speaking
-                  <Waveform />
-                </>
-              ) : (
-                "Thinking…"
-              )}
-            </div>
-          )}
-
-          <div ref={messagesEndRef} />
-        </div>
-
-        {/* Input bar */}
-        <div
-          className="flex gap-2 px-3 pb-3 pt-1 shrink-0"
-          style={{ borderTop: "1px solid #b4c4d4" }}
-        >
-          <input
-            ref={inputRef}
-            type="text"
-            className="flex-1 text-xs rounded-xl px-3 py-2 outline-none transition-shadow duration-150"
-            style={{
-              background: "#eef4f8",
-              border: "1.5px solid #b4c8dc",
-              color: "#2a4a6a",
-            }}
-            placeholder={`What is ${firstName} good at?`}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-            disabled={loading}
-          />
-          <button
-            onClick={sendMessage}
-            disabled={loading || !input.trim()}
-            className="flex items-center justify-center w-8 h-8 rounded-xl transition-all duration-150"
-            style={{
-              background:
-                loading || !input.trim() ? "#c0d0e0" : "#3a7ab8",
-              color: loading || !input.trim() ? "#8aa0b8" : "#fff",
-              flexShrink: 0,
-            }}
-            title="Send"
-          >
-            <svg
-              width="13"
-              height="13"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <line x1="22" y1="2" x2="11" y2="13" />
-              <polygon points="22 2 15 22 11 13 2 9 22 2" />
-            </svg>
-          </button>
+            return (
+              <button
+                key={btn.id}
+                onClick={() => handlePreset(btn)}
+                disabled={loading}
+                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-left transition-all duration-150"
+                style={{
+                  background: isActive ? "#3a7ab8" : "#e4edf5",
+                  color: isActive ? "#fff" : "#2a4a6a",
+                  border: isActive ? "1.5px solid #2a6aaa" : "1.5px solid #b4c8dc",
+                  opacity: loading && !isActive ? 0.5 : 1,
+                  cursor: loading ? "not-allowed" : "pointer",
+                }}
+              >
+                <span style={{ fontSize: "13px" }}>{btn.icon}</span>
+                <span className="flex-1">{btn.label}</span>
+                {isThisLoading && (
+                  <span className="text-[10px] opacity-70">Generating…</span>
+                )}
+                {isThisPlaying && <Waveform />}
+              </button>
+            );
+          })}
         </div>
       </div>
     </>

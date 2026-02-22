@@ -44,47 +44,29 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const audioParts: Buffer[] = [];
-
-    const audioBase64 = await new Promise<string | null>((resolve, reject) => {
-      ai.live
-        .connect({
-          model: "gemini-2.5-flash-native-audio-preview-12-2025",
-          config: {
-            responseModalities: [Modality.AUDIO],
-            systemInstruction: systemContext,
-            speechConfig: {
-              voiceConfig: { prebuiltVoiceConfig: { voiceName: "Kore" } },
-            },
-          },
-          callbacks: {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            onmessage: (msg: any) => {
-              const parts = msg?.serverContent?.modelTurn?.parts ?? [];
-              for (const part of parts) {
-                if (part.inlineData?.data) {
-                  audioParts.push(Buffer.from(part.inlineData.data, "base64"));
-                }
-              }
-              if (msg?.serverContent?.turnComplete) {
-                resolve(
-                  audioParts.length > 0
-                    ? pcmToWav(Buffer.concat(audioParts)).toString("base64")
-                    : null
-                );
-              }
-            },
-            onerror: (e: unknown) => reject(new Error(String(e))),
-          },
-        })
-        .then((session) => {
-          session.sendClientContent({
-            turns: [{ role: "user", parts: [{ text: question }] }],
-            turnComplete: true,
-          });
-        })
-        .catch(reject);
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash-preview-tts",
+      contents: [{ role: "user", parts: [{ text: question }] }],
+      config: {
+        responseModalities: [Modality.AUDIO],
+        speechConfig: {
+          voiceConfig: { prebuiltVoiceConfig: { voiceName: "Kore" } },
+        },
+        systemInstruction: systemContext,
+      },
     });
+
+    const audioParts: Buffer[] = [];
+    for (const part of response.candidates?.[0]?.content?.parts ?? []) {
+      if (part.inlineData?.data) {
+        audioParts.push(Buffer.from(part.inlineData.data, "base64"));
+      }
+    }
+
+    const audioBase64 =
+      audioParts.length > 0
+        ? pcmToWav(Buffer.concat(audioParts)).toString("base64")
+        : null;
 
     return NextResponse.json({ audioBase64 });
   } catch (err: unknown) {
