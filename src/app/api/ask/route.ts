@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, Modality } from "@google/genai";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
         .connect({
           model: "gemini-2.5-flash-native-audio-preview-12-2025",
           config: {
-            responseModalities: ["AUDIO"],
+            responseModalities: [Modality.AUDIO],
             systemInstruction: systemContext,
             speechConfig: {
               voiceConfig: { prebuiltVoiceConfig: { voiceName: "Kore" } },
