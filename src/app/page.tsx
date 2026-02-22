@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Header from "@/components/Header";
 import SearchLauncher from "@/components/SearchLauncher";
 import PortfolioWindow from "@/components/PortfolioWindow";
@@ -8,6 +8,7 @@ import ProjectWindow from "@/components/ProjectWindow";
 import AboutPage from "@/components/AboutPage";
 import IntroExperience from "@/components/IntroExperience";
 import { Person } from "@/lib/types";
+import { people as defaultPeople } from "@/lib/data";
 
 interface PortfolioEntry {
   person: Person;
@@ -27,16 +28,18 @@ const BASE_Z = 200;
 export default function Home() {
   const [showIntro, setShowIntro] = useState(true);
   const [activeTab, setActiveTab] = useState<"projects" | "about">("projects");
+  const [people, setPeople] = useState<Person[]>(defaultPeople);
   const [openPortfolios, setOpenPortfolios] = useState<PortfolioEntry[]>([]);
+
+  useEffect(() => {
+    fetch("/api/people")
+      .then((r) => r.json())
+      .then((data) => { if (Array.isArray(data)) setPeople(data); })
+      .catch(() => {});
+  }, []);
   const [openProjects, setOpenProjects] = useState<ProjectEntry[]>([]);
   const [zCounter, setZCounter] = useState(BASE_Z);
   const keyCounter = useRef(0);
-
-  const nextZ = () => {
-    const next = zCounter + 1;
-    setZCounter(next);
-    return next;
-  };
 
   const handleOpenPortfolio = (person: Person) => {
     // If already open, bring to front
@@ -97,7 +100,7 @@ export default function Home() {
       {activeTab === "projects" ? (
         <>
           {/* Central search launcher */}
-          <SearchLauncher onOpenPortfolio={handleOpenPortfolio} />
+          <SearchLauncher people={people} onOpenPortfolio={handleOpenPortfolio} />
 
           {/* Open portfolio windows */}
           {openPortfolios.map((entry) => (
