@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenAI } from "@google/genai";
 
 export const dynamic = "force-dynamic";
-// Live API uses WebSockets — give it enough time
 export const maxDuration = 30;
 
 function pcmToWav(
@@ -46,46 +45,51 @@ export async function POST(req: NextRequest) {
     }
 
     const audioParts: Buffer[] = [];
-    let text = "";
+    let collectedText = "";
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const session = await (ai as any).live.connect({
-      model: "gemini-2.5-flash-native-audio-preview-12-2025",
-      config: {
-        responseModalities: ["AUDIO"],
-        systemInstruction: systemContext,
-        speechConfig: {
-          voiceConfig: { prebuiltVoiceConfig: { voiceName: "Kore" } },
-        },
-      },
+    const audioBase64 = await new Promise<string | null>((resolve, reject) => {
+      ai.live
+        .connect({
+          model: "gemini-2.5-flash-native-audio-preview-12-2025",
+          config: {
+            responseModalities: ["AUDIO"],
+            systemInstruction: systemContext,
+            speechConfig: {
+              voiceConfig: { prebuiltVoiceConfig: { voiceName: "Kore" } },
+            },
+          },
+          callbacks: {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            onmessage: (msg: any) => {
+              const parts = msg?.serverContent?.modelTurn?.parts ?? [];
+              for (const part of parts) {
+                if (part.inlineData?.data) {
+                  audioParts.push(Buffer.from(part.inlineData.data, "base64"));
+                }
+                if (part.text) collectedText += part.text;
+              }
+              if (msg?.serverContent?.turnComplete) {
+                resolve(
+                  audioParts.length > 0
+                    ? pcmToWav(Buffer.concat(audioParts)).toString("base64")
+                    : null
+                );
+              }
+            },
+            onerror: (e: unknown) => reject(new Error(String(e))),
+          },
+        })
+        .then((session) => {
+          // Send the question once connection is established
+          session.sendClientContent({
+            turns: [{ role: "user", parts: [{ text: question }] }],
+            turnComplete: true,
+          });
+        })
+        .catch(reject);
     });
 
-    await session.sendClientContent({
-      turns: [{ role: "user", parts: [{ text: question }] }],
-      turnComplete: true,
-    });
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    for await (const msg of session.receive() as AsyncIterable<any>) {
-      const parts = msg?.serverContent?.modelTurn?.parts ?? [];
-      for (const part of parts) {
-        if (part.inlineData?.data) {
-          audioParts.push(Buffer.from(part.inlineData.data, "base64"));
-        }
-        if (part.text) text += part.text;
-      }
-      if (msg?.serverContent?.turnComplete) break;
-    }
-
-    await session.close();
-
-    let audioBase64: string | null = null;
-    if (audioParts.length > 0) {
-      const pcm = Buffer.concat(audioParts);
-      audioBase64 = pcmToWav(pcm, 24000).toString("base64");
-    }
-
-    return NextResponse.json({ audioBase64, text: text || null });
+    return NextResponse.json({ audioBase64, text: collectedText || null });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error("[/api/ask]", message);
