@@ -45,6 +45,8 @@ const PRESET_BUTTONS = [
 
 type Phase = "idle" | "loading" | "playing";
 
+const ESTIMATED_MS = 8000; // estimated API response time for progress bar
+
 function Waveform() {
   return (
     <span className="inline-flex items-end gap-[2px] h-3">
@@ -68,38 +70,49 @@ export default function AIChat({ person }: AIChatProps) {
   const [phase, setPhase] = useState<Phase>("idle");
   const [progress, setProgress] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const animRef = useRef<number | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startTimeRef = useRef<number>(0);
 
-  // Drive fake progress bar while loading
+  // Drive smooth progress bar while loading
   useEffect(() => {
     if (phase !== "loading") {
-      if (animRef.current) cancelAnimationFrame(animRef.current);
+      if (intervalRef.current) clearInterval(intervalRef.current);
       return;
     }
     setProgress(0);
     startTimeRef.current = performance.now();
-    const FAKE_DURATION = 11000; // reach ~90% in 11s
-
-    const tick = () => {
+    // Exponential ease: fast start, decelerates near 85%
+    intervalRef.current = setInterval(() => {
       const elapsed = performance.now() - startTimeRef.current;
-      const p = Math.min(90, (elapsed / FAKE_DURATION) * 90);
+      const p = Math.min(85, 85 * (1 - Math.exp(-elapsed / 4000)));
       setProgress(p);
-      if (p < 90) animRef.current = requestAnimationFrame(tick);
-    };
-    animRef.current = requestAnimationFrame(tick);
+      if (p >= 85) {
+        clearInterval(intervalRef.current!);
+        intervalRef.current = null;
+      }
+    }, 150);
     return () => {
-      if (animRef.current) cancelAnimationFrame(animRef.current);
+      if (intervalRef.current) clearInterval(intervalRef.current);
     };
   }, [phase]);
 
-  const handlePreset = async (btn: (typeof PRESET_BUTTONS)[number]) => {
-    if (phase !== "idle") return;
+  // Clear all audio event handlers before resetting src to prevent
+  // onerror/onended from firing and cancelling the new loading phase
+  const stopAudio = () => {
     if (audioRef.current) {
+      audioRef.current.onplay = null;
+      audioRef.current.onended = null;
+      audioRef.current.onerror = null;
       audioRef.current.pause();
       audioRef.current.src = "";
     }
+  };
+
+  const handlePreset = async (btn: (typeof PRESET_BUTTONS)[number]) => {
+    if (phase === "loading") return; // don't interrupt an in-flight request
+    stopAudio();
     setPhase("loading");
+    setProgress(0);
 
     try {
       const res = await fetch("/api/ask", {
@@ -114,11 +127,10 @@ export default function AIChat({ person }: AIChatProps) {
       if (data.error) throw new Error(data.error);
 
       if (data.audioBase64) {
-        // Snap progress to 100% before playing
-        if (animRef.current) cancelAnimationFrame(animRef.current);
+        if (intervalRef.current) clearInterval(intervalRef.current);
         setProgress(100);
 
-        await new Promise((r) => setTimeout(r, 250));
+        await new Promise((r) => setTimeout(r, 300));
 
         const bytes = Uint8Array.from(atob(data.audioBase64), (c) => c.charCodeAt(0));
         const blob = new Blob([bytes], { type: "audio/wav" });
@@ -129,10 +141,12 @@ export default function AIChat({ person }: AIChatProps) {
         audioRef.current.onplay = () => setPhase("playing");
         audioRef.current.onended = () => {
           setPhase("idle");
+          setProgress(0);
           URL.revokeObjectURL(url);
         };
         audioRef.current.onerror = () => {
           setPhase("idle");
+          setProgress(0);
           URL.revokeObjectURL(url);
         };
         audioRef.current.play().catch(() => setPhase("idle"));
@@ -141,6 +155,7 @@ export default function AIChat({ person }: AIChatProps) {
       }
     } catch {
       setPhase("idle");
+      setProgress(0);
     }
   };
 
@@ -155,25 +170,39 @@ export default function AIChat({ person }: AIChatProps) {
     >
       {phase === "loading" ? (
         /* ── Progress bar ─────────────────────────────────────────── */
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-1.5">
+          <div className="flex justify-between items-center">
+            <span className="text-[10px]" style={{ color: "#6b8dad" }}>
+              {progress >= 99 ? "Starting playback…" : "Generating audio…"}
+            </span>
+            {progress < 99 && (() => {
+              // compute estimated seconds remaining from the exponential curve
+              const estElapsed = progress > 0
+                ? -4000 * Math.log(Math.max(0.001, 1 - progress / 85))
+                : 0;
+              const secsLeft = Math.max(0, Math.round((ESTIMATED_MS - estElapsed) / 1000));
+              return (
+                <span className="text-[10px] font-medium" style={{ color: "#4a7a9a" }}>
+                  ~{secsLeft}s
+                </span>
+              );
+            })()}
+          </div>
           <div
             className="w-full rounded-full overflow-hidden"
-            style={{ height: 6, background: "#a0b8cc" }}
+            style={{ height: 5, background: "#a0b8cc" }}
           >
             <div
               className="h-full rounded-full"
               style={{
                 width: `${progress}%`,
                 background: "linear-gradient(90deg,#4a8ab8,#6cb0d8)",
-                transition: progress === 100
-                  ? "width 0.25s ease-out"
-                  : "width 0.1s linear",
+                transition: progress >= 99
+                  ? "width 0.3s ease-out"
+                  : "width 0.15s linear",
               }}
             />
           </div>
-          <p className="text-[10px] text-center" style={{ color: "#6b8dad" }}>
-            Generating audio…
-          </p>
         </div>
       ) : (
         /* ── Button row ───────────────────────────────────────────── */
@@ -182,21 +211,21 @@ export default function AIChat({ person }: AIChatProps) {
             <div key={btn.id} className="relative flex-1 group">
               <button
                 onClick={() => handlePreset(btn)}
-                disabled={phase !== "idle"}
+                disabled={phase === "loading"}
                 className="w-full flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-lg text-[11px] transition-all duration-150"
                 style={{
                   background: phase === "idle" ? "#dce8f4" : "#c8d4e0",
                   border: "1px solid #a8bece",
                   color: phase === "idle" ? "#2a4a6a" : "#8aa0b8",
-                  opacity: phase === "playing" ? 0.55 : 1,
-                  cursor: phase !== "idle" ? "not-allowed" : "pointer",
+                  opacity: phase === "loading" ? 0.55 : 1,
+                  cursor: phase === "loading" ? "not-allowed" : "pointer",
                 }}
                 title={btn.label}
               >
                 <span style={{ fontSize: 14 }}>{btn.icon}</span>
               </button>
               {/* Tooltip */}
-              {phase === "idle" && (
+              {phase !== "loading" && (
                 <div
                   className="absolute bottom-full left-1/2 mb-1.5 px-2 py-1 rounded-md text-[10px] font-medium whitespace-nowrap pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-50"
                   style={{
