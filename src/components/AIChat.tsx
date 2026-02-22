@@ -7,47 +7,19 @@ interface AIChatProps {
   person: Person;
 }
 
-/** Build a rich system prompt from the person's portfolio data */
+/** Build a concise system prompt from the person's portfolio data */
 function buildSystemContext(person: Person): string {
-  const currentList =
-    person.currentProjects.length > 0
-      ? person.currentProjects
-          .map((p) => `  • ${p.name} (started ${p.dateStarted}): ${p.description}`)
-          .join("\n")
-      : "  None listed";
+  const projects = [
+    ...person.currentProjects.map((p) => `${p.name} (current): ${p.description}`),
+    ...person.pastProjects.map((p) => `${p.name} (past): ${p.description}`),
+  ].join("; ");
 
-  const pastList =
-    person.pastProjects.length > 0
-      ? person.pastProjects
-          .map(
-            (p) =>
-              `  • ${p.name} (${p.dateStarted}–${p.dateEnded ?? "present"}): ${p.description}`
-          )
-          .join("\n")
-      : "  None listed";
+  const socials = person.socials.map((s) => `${s.label}: ${s.url}`).join(", ");
 
-  const socialList =
-    person.socials.length > 0
-      ? person.socials.map((s) => `  • ${s.label}: ${s.url}`).join("\n")
-      : "  None listed";
-
-  return `You are a friendly AI assistant embedded inside ${person.name}'s developer portfolio. \
-Answer questions about ${person.name} based only on the information below. \
-Be concise, warm, and conversational — as if you're their hype person. Keep answers short (2-4 sentences max). \
-Do not make up details not supported by the data. \
-If asked about skills, infer them naturally from the bio and projects.
-
-=== ${person.name.toUpperCase()} ===
+  return `You are a hype-person AI for ${person.name}'s portfolio. Answer in 2-3 short spoken sentences max. Be warm and punchy. Only use facts below.
 Bio: ${person.bio}
-
-Current projects:
-${currentList}
-
-Past projects:
-${pastList}
-
-Socials / Contact:
-${socialList}`.trim();
+Projects: ${projects}
+Contact: ${socials}`.trim();
 }
 
 /** Waveform animation shown while audio is playing */
@@ -80,29 +52,25 @@ const PRESET_BUTTONS = [
     id: "who",
     label: "Who is this?",
     icon: "👤",
-    prompt: (name: string) =>
-      `Give a brief, friendly intro of who ${name} is and what they're all about. Keep it punchy, 2-3 sentences.`,
+    prompt: (name: string) => `Give a quick punchy intro of who ${name} is.`,
   },
   {
     id: "experience",
     label: "Their experience",
     icon: "💼",
-    prompt: (name: string) =>
-      `Tell me about ${name}'s projects and experience — what have they built and what are they working on now? Keep it to 2-3 sentences.`,
+    prompt: (name: string) => `What has ${name} built? Summarize their projects briefly.`,
   },
   {
     id: "contact",
     label: "Contact info",
     icon: "📬",
-    prompt: (name: string) =>
-      `How can I reach ${name}? Give me their contact info and social links in a quick sentence or two.`,
+    prompt: (name: string) => `How can someone reach ${name}? Give their socials.`,
   },
   {
     id: "help",
     label: "How can they help?",
     icon: "🚀",
-    prompt: (name: string) =>
-      `What can ${name} help me with? What skills and value do they bring? Keep it short and punchy.`,
+    prompt: (name: string) => `What can ${name} help with? What value do they bring?`,
   },
 ];
 
