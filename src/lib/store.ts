@@ -26,7 +26,10 @@ export async function getPeople(): Promise<Person[]> {
     const { list } = await getBlobModule();
     const { blobs } = await list({ prefix: BLOB_FILENAME });
     if (blobs.length > 0) {
-      const res = await fetch(blobs[0].url, { cache: "no-store" });
+      const res = await fetch(blobs[0].url, {
+        cache: "no-store",
+        headers: { Authorization: `Bearer ${process.env.BLOB_READ_WRITE_TOKEN}` },
+      });
       if (res.ok) {
         const data = await res.json();
         return data as Person[];
@@ -55,7 +58,7 @@ export async function savePeople(people: Person[]): Promise<void> {
     // ignore deletion errors
   }
   await put(BLOB_FILENAME, JSON.stringify(people, null, 2), {
-    access: "public",
+    access: "private",
     contentType: "application/json",
     addRandomSuffix: false,
   });
