@@ -9,11 +9,11 @@ interface AIChatProps {
 
 function buildSystemContext(person: Person): string {
   const projects = [
-    ...person.currentProjects.map((p) => `${p.name} (current): ${p.description}`),
+    ...person.currentProjects.map((p) => `${p.name}: ${p.description}`),
     ...person.pastProjects.map((p) => `${p.name} (past): ${p.description}`),
   ].join("; ");
-  const socials = person.socials.map((s) => `${s.label}: ${s.url}`).join(", ");
-  return `You are a hype-person AI for ${person.name}'s portfolio. Answer in 2-3 short spoken sentences max. Be warm and punchy. Only use facts below.\nBio: ${person.bio}\nProjects: ${projects}\nContact: ${socials}`.trim();
+  const socials = person.socials.map((s) => `${s.label} ${s.url}`).join(", ");
+  return `Hype-person AI for ${person.name}. 2 sentences max, warm+punchy, facts only.\nBio: ${person.bio}\nWork: ${projects}\nSocials: ${socials}`;
 }
 
 const PRESET_BUTTONS = [
@@ -45,7 +45,7 @@ const PRESET_BUTTONS = [
 
 type Phase = "idle" | "loading" | "playing";
 
-const ESTIMATED_MS = 8000; // estimated API response time for progress bar
+const ESTIMATED_MS = 2000; // ~2s for Gemini Flash text response
 
 function Waveform() {
   return (
@@ -69,7 +69,6 @@ function Waveform() {
 export default function AIChat({ person }: AIChatProps) {
   const [phase, setPhase] = useState<Phase>("idle");
   const [progress, setProgress] = useState(0);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startTimeRef = useRef<number>(0);
 
@@ -84,33 +83,25 @@ export default function AIChat({ person }: AIChatProps) {
     // Exponential ease: fast start, decelerates near 85%
     intervalRef.current = setInterval(() => {
       const elapsed = performance.now() - startTimeRef.current;
-      const p = Math.min(85, 85 * (1 - Math.exp(-elapsed / 4000)));
+      const p = Math.min(85, 85 * (1 - Math.exp(-elapsed / 1200)));
       setProgress(p);
       if (p >= 85) {
         clearInterval(intervalRef.current!);
         intervalRef.current = null;
       }
-    }, 150);
+    }, 80);
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
   }, [phase]);
 
-  // Clear all audio event handlers before resetting src to prevent
-  // onerror/onended from firing and cancelling the new loading phase
-  const stopAudio = () => {
-    if (audioRef.current) {
-      audioRef.current.onplay = null;
-      audioRef.current.onended = null;
-      audioRef.current.onerror = null;
-      audioRef.current.pause();
-      audioRef.current.src = "";
-    }
+  const stopSpeech = () => {
+    if (typeof window !== "undefined") window.speechSynthesis.cancel();
   };
 
   const handlePreset = async (btn: (typeof PRESET_BUTTONS)[number]) => {
-    if (phase === "loading") return; // don't interrupt an in-flight request
-    stopAudio();
+    if (phase === "loading") return;
+    stopSpeech();
     setPhase("loading");
     setProgress(0);
 
@@ -126,33 +117,20 @@ export default function AIChat({ person }: AIChatProps) {
       const data = await res.json();
       if (data.error) throw new Error(data.error);
 
-      if (data.audioBase64) {
-        if (intervalRef.current) clearInterval(intervalRef.current);
-        setProgress(100);
+      const text: string = data.text ?? "";
+      if (!text.trim()) { setPhase("idle"); return; }
 
-        await new Promise((r) => setTimeout(r, 300));
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      setProgress(100);
+      await new Promise((r) => setTimeout(r, 200));
 
-        const bytes = Uint8Array.from(atob(data.audioBase64), (c) => c.charCodeAt(0));
-        const blob = new Blob([bytes], { type: "audio/wav" });
-        const url = URL.createObjectURL(blob);
-
-        if (!audioRef.current) audioRef.current = new Audio();
-        audioRef.current.src = url;
-        audioRef.current.onplay = () => setPhase("playing");
-        audioRef.current.onended = () => {
-          setPhase("idle");
-          setProgress(0);
-          URL.revokeObjectURL(url);
-        };
-        audioRef.current.onerror = () => {
-          setPhase("idle");
-          setProgress(0);
-          URL.revokeObjectURL(url);
-        };
-        audioRef.current.play().catch(() => setPhase("idle"));
-      } else {
-        setPhase("idle");
-      }
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 1.05;
+      utterance.pitch = 1;
+      utterance.onstart = () => setPhase("playing");
+      utterance.onend = () => { setPhase("idle"); setProgress(0); };
+      utterance.onerror = () => { setPhase("idle"); setProgress(0); };
+      window.speechSynthesis.speak(utterance);
     } catch {
       setPhase("idle");
       setProgress(0);
@@ -173,14 +151,13 @@ export default function AIChat({ person }: AIChatProps) {
         <div className="flex flex-col gap-1.5">
           <div className="flex justify-between items-center">
             <span className="text-[10px]" style={{ color: "#6b8dad" }}>
-              {progress >= 99 ? "Starting playback…" : "Generating audio…"}
+              {progress >= 99 ? "Speaking…" : "Thinking…"}
             </span>
             {progress < 99 && (() => {
-              // compute estimated seconds remaining from the exponential curve
               const estElapsed = progress > 0
-                ? -4000 * Math.log(Math.max(0.001, 1 - progress / 85))
+                ? -1200 * Math.log(Math.max(0.001, 1 - progress / 85))
                 : 0;
-              const secsLeft = Math.max(0, Math.round((ESTIMATED_MS - estElapsed) / 1000));
+              const secsLeft = Math.max(1, Math.round((ESTIMATED_MS - estElapsed) / 1000));
               return (
                 <span className="text-[10px] font-medium" style={{ color: "#4a7a9a" }}>
                   ~{secsLeft}s
@@ -197,9 +174,7 @@ export default function AIChat({ person }: AIChatProps) {
               style={{
                 width: `${progress}%`,
                 background: "linear-gradient(90deg,#4a8ab8,#6cb0d8)",
-                transition: progress >= 99
-                  ? "width 0.3s ease-out"
-                  : "width 0.15s linear",
+                transition: progress >= 99 ? "width 0.3s ease-out" : "width 0.08s linear",
               }}
             />
           </div>
@@ -216,7 +191,6 @@ export default function AIChat({ person }: AIChatProps) {
                   background: phase === "idle" ? "#dce8f4" : "#c8d4e0",
                   border: "1px solid #a8bece",
                   color: phase === "idle" ? "#2a4a6a" : "#8aa0b8",
-                  opacity: 1,
                   cursor: "pointer",
                 }}
                 title={btn.label}
@@ -225,26 +199,26 @@ export default function AIChat({ person }: AIChatProps) {
               </button>
               {/* Tooltip */}
               <div
-                  className="absolute bottom-full left-1/2 mb-1.5 px-2 py-1 rounded-md text-[10px] font-medium whitespace-nowrap pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-50"
+                className="absolute bottom-full left-1/2 mb-1.5 px-2 py-1 rounded-md text-[10px] font-medium whitespace-nowrap pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-50"
+                style={{
+                  transform: "translateX(-50%)",
+                  background: "#2a4a6a",
+                  color: "#e8f0f8",
+                }}
+              >
+                {btn.label}
+                <div
+                  className="absolute top-full left-1/2"
                   style={{
                     transform: "translateX(-50%)",
-                    background: "#2a4a6a",
-                    color: "#e8f0f8",
+                    width: 0,
+                    height: 0,
+                    borderLeft: "4px solid transparent",
+                    borderRight: "4px solid transparent",
+                    borderTop: "4px solid #2a4a6a",
                   }}
-                >
-                  {btn.label}
-                  <div
-                    className="absolute top-full left-1/2"
-                    style={{
-                      transform: "translateX(-50%)",
-                      width: 0,
-                      height: 0,
-                      borderLeft: "4px solid transparent",
-                      borderRight: "4px solid transparent",
-                      borderTop: "4px solid #2a4a6a",
-                    }}
-                  />
-                </div>
+                />
+              </div>
             </div>
           ))}
           {phase === "playing" && (
@@ -257,4 +231,3 @@ export default function AIChat({ person }: AIChatProps) {
     </div>
   );
 }
-
