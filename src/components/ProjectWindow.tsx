@@ -6,14 +6,31 @@ interface ProjectWindowProps {
   url: string;
   title: string;
   onClose: () => void;
+  onMinimize: () => void;
+  minimized?: boolean;
   zIndex: number;
   onFocus: () => void;
+}
+
+type AnimState = "idle" | "pre-close" | "closing" | "minimizing" | "init-restore" | "restoring";
+
+const redCursor = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16'%3E%3Ccircle cx='6' cy='6' r='5' fill='%23ff5f57' stroke='%23993b37' stroke-width='1.2'/%3E%3C/svg%3E") 6 6, pointer`;
+const yellowCursor = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16'%3E%3Ccircle cx='6' cy='6' r='5' fill='%23febc2e' stroke='%23a07800' stroke-width='1.2'/%3E%3C/svg%3E") 6 6, pointer`;
+const greenCursor = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16'%3E%3Ccircle cx='6' cy='6' r='5' fill='%2328c840' stroke='%23107a22' stroke-width='1.2'/%3E%3C/svg%3E") 6 6, pointer`;
+
+export function getProjectFaviconUrl(url: string): string {
+  try { return `https://www.google.com/s2/favicons?domain=${new URL(url).hostname}&sz=48`; } catch { return ""; }
+}
+export function getProjectDomain(url: string): string {
+  try { return new URL(url).hostname; } catch { return url; }
 }
 
 export default function ProjectWindow({
   url,
   title,
   onClose,
+  onMinimize,
+  minimized = false,
   zIndex,
   onFocus,
 }: ProjectWindowProps) {
@@ -30,6 +47,75 @@ export default function ProjectWindow({
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const [iframeError, setIframeError] = useState(false);
+  const [isMaximized, setIsMaximized] = useState(false);
+  const prevRectRef = useRef<{ x: number; y: number; width: number; height: number } | null>(null);
+
+  // Animation state
+  const [animState, setAnimState] = useState<AnimState>("idle");
+  const animTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dockTranslateRef = useRef({ x: 0, y: 0 });
+  const prevMinimizedRef = useRef(minimized);
+
+  useEffect(() => {
+    if (prevMinimizedRef.current === true && minimized === false) {
+      setAnimState("init-restore");
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        setAnimState("restoring");
+        animTimerRef.current = setTimeout(() => setAnimState("idle"), 500);
+      }));
+    }
+    prevMinimizedRef.current = minimized;
+  }, [minimized]);
+
+  useEffect(() => () => { if (animTimerRef.current) clearTimeout(animTimerRef.current); }, []);
+
+  const handleToggleMaximize = useCallback(() => {
+    if (isMaximized) {
+      if (prevRectRef.current) {
+        setPosition({ x: prevRectRef.current.x, y: prevRectRef.current.y });
+        setSize({ width: prevRectRef.current.width, height: prevRectRef.current.height });
+      }
+      setIsMaximized(false);
+    } else {
+      prevRectRef.current = { x: position.x, y: position.y, width: size.width, height: size.height };
+      setPosition({ x: 0, y: 0 });
+      setSize({ width: window.innerWidth, height: window.innerHeight });
+      setIsMaximized(true);
+    }
+  }, [isMaximized, position, size]);
+
+  const computeDockTranslate = () => {
+    if (typeof window === "undefined") return { x: 0, y: 0 };
+    return { x: window.innerWidth / 2 - (position.x + size.width / 2), y: window.innerHeight - 48 - (position.y + size.height / 2) };
+  };
+
+  const handleCloseClick = () => {
+    if (animTimerRef.current) clearTimeout(animTimerRef.current);
+    setAnimState("pre-close");
+    animTimerRef.current = setTimeout(() => {
+      setAnimState("closing");
+      animTimerRef.current = setTimeout(() => onClose(), 260);
+    }, 70);
+  };
+
+  const handleMinimizeClick = () => {
+    if (animTimerRef.current) clearTimeout(animTimerRef.current);
+    dockTranslateRef.current = computeDockTranslate();
+    setAnimState("minimizing");
+    animTimerRef.current = setTimeout(() => { onMinimize(); setAnimState("idle"); }, 420);
+  };
+
+  const getAnimStyle = (): React.CSSProperties => {
+    const { x, y } = dockTranslateRef.current;
+    switch (animState) {
+      case "pre-close": return { transform: "scale(1.05)", transition: "transform 0.07s ease-out" };
+      case "closing": return { transform: "scale(0)", opacity: 0, transition: "transform 0.26s cubic-bezier(0.4,0,1,1), opacity 0.22s ease" };
+      case "minimizing": return { transform: `translate(${x}px,${y}px) scale(0.1)`, opacity: 0, transition: "transform 0.42s cubic-bezier(0.4,0,1,1), opacity 0.35s ease" };
+      case "init-restore": return { transform: `translate(${x}px,${y}px) scale(0.1)`, opacity: 0, transition: "none" };
+      case "restoring": return { transform: "translate(0,0) scale(1)", opacity: 1, transition: "transform 0.45s cubic-bezier(0.34,1.56,0.64,1), opacity 0.28s ease" };
+      default: return {};
+    }
+  };
 
   const dragOffset = useRef({ x: 0, y: 0 });
 
@@ -91,17 +177,12 @@ export default function ProjectWindow({
     };
   }, [isDragging, isResizing]);
 
-  // Determine display domain for the address bar
   let displayUrl = url;
-  try {
-    displayUrl = new URL(url).hostname;
-  } catch {
-    // keep original
-  }
+  try { displayUrl = new URL(url).hostname; } catch { /* keep */ }
 
   return (
     <div
-      className="fixed rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+      className="fixed shadow-2xl flex flex-col overflow-hidden"
       style={{
         left: position.x,
         top: position.y,
@@ -111,7 +192,14 @@ export default function ProjectWindow({
         background: "#dce6f0",
         border: "2px solid #8aa0b8",
         userSelect: isDragging || isResizing ? "none" : "auto",
-        transition: isDragging || isResizing ? "none" : "box-shadow 0.2s",
+        visibility: (minimized && animState === "idle") ? "hidden" : "visible",
+        pointerEvents: (minimized && animState === "idle") ? "none" : "auto",
+        borderRadius: isMaximized ? 0 : 16,
+        transition: animState !== "idle" ? undefined
+          : isMaximized
+            ? "left 0.32s cubic-bezier(0.4,0,0.2,1), top 0.32s cubic-bezier(0.4,0,0.2,1), width 0.32s cubic-bezier(0.4,0,0.2,1), height 0.32s cubic-bezier(0.4,0,0.2,1), border-radius 0.32s"
+            : isDragging || isResizing ? "none" : "box-shadow 0.2s",
+        ...getAnimStyle(),
       }}
       onMouseDown={onFocus}
     >
@@ -128,9 +216,9 @@ export default function ProjectWindow({
         <div className="flex items-center gap-1.5 shrink-0">
           {/* Red — close */}
           <button
-            onClick={onClose}
+            onClick={handleCloseClick}
             className="group w-3.5 h-3.5 rounded-full flex items-center justify-center transition-opacity duration-150 cursor-pointer"
-            style={{ background: "#ff5f57" }}
+            style={{ background: "#ff5f57", cursor: redCursor }}
             title="Close"
           >
             <svg
@@ -148,46 +236,29 @@ export default function ProjectWindow({
               />
             </svg>
           </button>
-          {/* Yellow — no-op */}
+          {/* Yellow — minimize */}
           <button
-            className="group w-3.5 h-3.5 rounded-full flex items-center justify-center transition-opacity duration-150 cursor-default"
-            style={{ background: "#febc2e" }}
-            title="Minimize (not available)"
+            onClick={handleMinimizeClick}
+            className="group w-3.5 h-3.5 rounded-full flex items-center justify-center"
+            style={{ background: "#febc2e", cursor: yellowCursor }}
+            title="Minimize"
           >
-            <svg
-              className="opacity-0 group-hover:opacity-100 transition-opacity"
-              width="6"
-              height="6"
-              viewBox="0 0 10 10"
-              fill="none"
-            >
-              <path
-                d="M1.5 5h7"
-                stroke="#7a5000"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-              />
+            <svg className="opacity-0 group-hover:opacity-100 transition-opacity" width="6" height="6" viewBox="0 0 10 10" fill="none">
+              <path d="M1.5 5h7" stroke="#7a5000" strokeWidth="1.8" strokeLinecap="round" />
             </svg>
           </button>
-          {/* Green — no-op */}
+          {/* Green — maximize / restore */}
           <button
-            className="group w-3.5 h-3.5 rounded-full flex items-center justify-center transition-opacity duration-150 cursor-default"
-            style={{ background: "#28c840" }}
-            title="Full screen (not available)"
+            onClick={handleToggleMaximize}
+            className="group w-3.5 h-3.5 rounded-full flex items-center justify-center"
+            style={{ background: "#28c840", cursor: greenCursor }}
+            title={isMaximized ? "Restore" : "Maximise"}
           >
-            <svg
-              className="opacity-0 group-hover:opacity-100 transition-opacity"
-              width="6"
-              height="6"
-              viewBox="0 0 10 10"
-              fill="none"
-            >
-              <path
-                d="M1 1h3.5M1 1v3.5M9 9H5.5M9 9V5.5"
-                stroke="#0a4a0a"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-              />
+            <svg className="opacity-0 group-hover:opacity-100 transition-opacity" width="6" height="6" viewBox="0 0 10 10" fill="none">
+              {isMaximized
+                ? <path d="M3 1L9 1M9 1V7M1 9L7 3" stroke="#0a4a0a" strokeWidth="1.5" strokeLinecap="round" />
+                : <path d="M1 1h3.5M1 1v3.5M9 9H5.5M9 9V5.5" stroke="#0a4a0a" strokeWidth="1.5" strokeLinecap="round" />
+              }
             </svg>
           </button>
         </div>

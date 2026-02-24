@@ -101,6 +101,28 @@ export default function PortfolioWindow({
   const [isMaximized, setIsMaximized] = useState(false);
   const prevRectRef = useRef<{ x: number; y: number; width: number; height: number } | null>(null);
 
+  // Window animation state
+  type AnimState = "idle" | "pre-close" | "closing" | "minimizing" | "init-restore" | "restoring";
+  const [animState, setAnimState] = useState<AnimState>("idle");
+  const animTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dockTranslateRef = useRef({ x: 0, y: 0 });
+  const prevMinimizedRef = useRef(minimized);
+
+  // Watch minimized prop: when it flips true→false, play restore animation
+  useEffect(() => {
+    if (prevMinimizedRef.current === true && minimized === false) {
+      setAnimState("init-restore");
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        setAnimState("restoring");
+        animTimerRef.current = setTimeout(() => setAnimState("idle"), 500);
+      }));
+    }
+    prevMinimizedRef.current = minimized;
+  }, [minimized]);
+
+  // Clean up timers on unmount
+  useEffect(() => () => { if (animTimerRef.current) clearTimeout(animTimerRef.current); }, []);
+
   // Edit mode
   const [editMode, setEditMode] = useState(false);
   const [editDraft, setEditDraft] = useState<Person>(person);
@@ -246,6 +268,50 @@ export default function PortfolioWindow({
     }
   }, [isMaximized, position, size]);
 
+  const computeDockTranslate = () => {
+    if (typeof window === "undefined") return { x: 0, y: 0 };
+    const dockCX = window.innerWidth / 2;
+    const dockCY = window.innerHeight - 48;
+    return { x: dockCX - (position.x + size.width / 2), y: dockCY - (position.y + size.height / 2) };
+  };
+
+  const handleCloseClick = () => {
+    if (animTimerRef.current) clearTimeout(animTimerRef.current);
+    setAnimState("pre-close");
+    animTimerRef.current = setTimeout(() => {
+      setAnimState("closing");
+      animTimerRef.current = setTimeout(() => onClose(), 260);
+    }, 70);
+  };
+
+  const handleMinimizeClick = () => {
+    if (animTimerRef.current) clearTimeout(animTimerRef.current);
+    dockTranslateRef.current = computeDockTranslate();
+    setAnimState("minimizing");
+    animTimerRef.current = setTimeout(() => {
+      onMinimize();
+      setAnimState("idle");
+    }, 420);
+  };
+
+  const getAnimStyle = (): React.CSSProperties => {
+    const { x, y } = dockTranslateRef.current;
+    switch (animState) {
+      case "pre-close":
+        return { transform: "scale(1.05)", transition: "transform 0.07s ease-out" };
+      case "closing":
+        return { transform: "scale(0)", opacity: 0, transition: "transform 0.26s cubic-bezier(0.4,0,1,1), opacity 0.22s ease" };
+      case "minimizing":
+        return { transform: `translate(${x}px,${y}px) scale(0.1)`, opacity: 0, transition: "transform 0.42s cubic-bezier(0.4,0,1,1), opacity 0.35s ease" };
+      case "init-restore":
+        return { transform: `translate(${x}px,${y}px) scale(0.1)`, opacity: 0, transition: "none" };
+      case "restoring":
+        return { transform: "translate(0,0) scale(1)", opacity: 1, transition: "transform 0.45s cubic-bezier(0.34,1.56,0.64,1), opacity 0.28s ease" };
+      default:
+        return {};
+    }
+  };
+
   return (
     <div
       ref={windowRef}
@@ -259,15 +325,18 @@ export default function PortfolioWindow({
         background: "#dce6f0",
         border: "2px solid #8aa0b8",
         userSelect: isDragging || isResizing ? "none" : "auto",
-        display: minimized ? "none" : undefined,
-        transition: isMaximized
-          ? "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)"
-          : isAnimating
-            ? "all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)"
-            : isDragging || isResizing
-              ? "none"
-              : "box-shadow 0.2s",
+        visibility: (minimized && animState === "idle") ? "hidden" : "visible",
+        pointerEvents: (minimized && animState === "idle") ? "none" : "auto",
+        transition: animState !== "idle" ? undefined
+          : isMaximized
+            ? "left 0.32s cubic-bezier(0.4,0,0.2,1), top 0.32s cubic-bezier(0.4,0,0.2,1), width 0.32s cubic-bezier(0.4,0,0.2,1), height 0.32s cubic-bezier(0.4,0,0.2,1), border-radius 0.32s"
+            : isAnimating
+              ? "all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)"
+              : isDragging || isResizing
+                ? "none"
+                : "box-shadow 0.2s",
         borderRadius: isMaximized ? 0 : undefined,
+        ...getAnimStyle(),
       }}
       onMouseDown={onFocus}
     >
@@ -284,7 +353,7 @@ export default function PortfolioWindow({
         <div className="flex items-center gap-1.5 shrink-0 z-10">
           {/* Red — close */}
           <button
-            onClick={onClose}
+            onClick={handleCloseClick}
             className="group w-3.5 h-3.5 rounded-full flex items-center justify-center transition-opacity duration-150"
             style={{ background: "#ff5f57", cursor: redCursor }}
             title="Close"
@@ -301,7 +370,7 @@ export default function PortfolioWindow({
           </button>
           {/* Yellow — minimize */}
           <button
-            onClick={onMinimize}
+            onClick={handleMinimizeClick}
             className="group w-3.5 h-3.5 rounded-full flex items-center justify-center"
             style={{ background: "#febc2e", cursor: yellowCursor }}
             title="Minimize"
