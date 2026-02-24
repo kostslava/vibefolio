@@ -1,7 +1,24 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Person } from "@/lib/types";
+
+// ── Global AI lock ────────────────────────────────────────────────────────────
+// Module-level singleton: only one AI response can run at a time across ALL
+// AIChat instances (even across multiple open portfolio cards).
+type LockListener = (busy: boolean) => void;
+const _lockListeners = new Set<LockListener>();
+let _globalBusy = false;
+
+const aiLock = {
+  get busy() { return _globalBusy; },
+  acquire() { _globalBusy = true; _lockListeners.forEach((fn) => fn(true)); },
+  release() { _globalBusy = false; _lockListeners.forEach((fn) => fn(false)); },
+  subscribe(fn: LockListener) {
+    _lockListeners.add(fn);
+    return () => { _lockListeners.delete(fn); };
+  },
+};
 
 interface AIChatProps {
   person: Person;
@@ -70,8 +87,17 @@ export default function AIChat({ person }: AIChatProps) {
   const [phase, setPhase] = useState<Phase>("idle");
   const [progress, setProgress] = useState(0);
   const [replyText, setReplyText] = useState("");
+  const [globalBusy, setGlobalBusy] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startTimeRef = useRef<number>(0);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const ownsLock = useRef(false); // true only for the instance that acquired the lock
+
+  // Subscribe to the global lock so all instances re-render when it changes
+  useEffect(() => {
+    setGlobalBusy(aiLock.busy);
+    return aiLock.subscribe(setGlobalBusy);
+  }, []);
 
   // Drive smooth progress bar while loading
   useEffect(() => {
@@ -90,21 +116,33 @@ export default function AIChat({ person }: AIChatProps) {
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [phase]);
 
+  const releaseLock = useCallback(() => {
+    if (ownsLock.current) { ownsLock.current = false; aiLock.release(); }
+  }, []);
 
-
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-
-  const stopAudio = () => {
+  const stopAudio = useCallback(() => {
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.src = "";
       audioRef.current = null;
     }
-  };
+  }, []);
+
+  const reset = useCallback((releaseGlobal = true) => {
+    stopAudio();
+    setPhase("idle");
+    setProgress(0);
+    setReplyText("");
+    if (releaseGlobal) releaseLock();
+  }, [stopAudio, releaseLock]);
 
   const handlePreset = async (btn: (typeof PRESET_BUTTONS)[number]) => {
-    if (phase === "loading") return;
-    stopAudio();
+    // Hard block: reject if ANY instance is already busy
+    if (aiLock.busy) return;
+
+    // Acquire the global lock
+    ownsLock.current = true;
+    aiLock.acquire();
     setPhase("loading");
     setProgress(0);
 
@@ -121,14 +159,13 @@ export default function AIChat({ person }: AIChatProps) {
       if (data.error) throw new Error(data.error);
 
       const text: string = data.text ?? "";
-      if (!text.trim()) { setPhase("idle"); return; }
+      if (!text.trim()) { reset(); return; }
 
       if (intervalRef.current) clearInterval(intervalRef.current);
       setProgress(100);
       setReplyText(text);
 
       if (data.audioBase64) {
-        // Play native Gemini TTS audio (WAV)
         const blob = new Blob(
           [Uint8Array.from(atob(data.audioBase64), (c) => c.charCodeAt(0))],
           { type: "audio/wav" }
@@ -137,18 +174,15 @@ export default function AIChat({ person }: AIChatProps) {
         const audio = new Audio(url);
         audioRef.current = audio;
         audio.onplay = () => setPhase("playing");
-        audio.onended = () => { setPhase("idle"); setProgress(0); setReplyText(""); URL.revokeObjectURL(url); };
-        audio.onerror = () => { setPhase("idle"); setProgress(0); setReplyText(""); URL.revokeObjectURL(url); };
+        audio.onended = () => { URL.revokeObjectURL(url); reset(); };
+        audio.onerror = () => { URL.revokeObjectURL(url); reset(); };
         await audio.play();
       } else {
-        // TTS unavailable – show text briefly then reset
         setPhase("playing");
-        setTimeout(() => { setPhase("idle"); setProgress(0); setReplyText(""); }, 6000);
+        setTimeout(() => reset(), 6000);
       }
     } catch {
-      setPhase("idle");
-      setProgress(0);
-      setReplyText("");
+      reset();
     }
   };
 
@@ -205,45 +239,52 @@ export default function AIChat({ person }: AIChatProps) {
       ) : (
         /* ── Button row ───────────────────────────────────────────── */
         <div className="flex gap-1.5">
-          {PRESET_BUTTONS.map((btn) => (
-            <div key={btn.id} className="relative flex-1 group">
-              <button
-                onClick={() => handlePreset(btn)}
-                className="w-full flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-lg text-[11px] transition-all duration-150"
-                style={{
-                  background: "#dce8f4",
-                  border: "1px solid #a8bece",
-                  color: "#2a4a6a",
-                  cursor: "pointer",
-                }}
-                title={btn.label}
-              >
-                <span style={{ fontSize: 14 }}>{btn.icon}</span>
-              </button>
-              {/* Tooltip */}
-              <div
-                className="absolute bottom-full left-1/2 mb-1.5 px-2 py-1 rounded-md text-[10px] font-medium whitespace-nowrap pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-50"
-                style={{
-                  transform: "translateX(-50%)",
-                  background: "#2a4a6a",
-                  color: "#e8f0f8",
-                }}
-              >
-                {btn.label}
-                <div
-                  className="absolute top-full left-1/2"
+          {PRESET_BUTTONS.map((btn) => {
+            const disabled = globalBusy;
+            return (
+              <div key={btn.id} className="relative flex-1 group">
+                <button
+                  onClick={() => handlePreset(btn)}
+                  disabled={disabled}
+                  className="w-full flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-lg text-[11px] transition-all duration-150"
                   style={{
-                    transform: "translateX(-50%)",
-                    width: 0,
-                    height: 0,
-                    borderLeft: "4px solid transparent",
-                    borderRight: "4px solid transparent",
-                    borderTop: "4px solid #2a4a6a",
+                    background: disabled ? "#c4d4e4" : "#dce8f4",
+                    border: "1px solid #a8bece",
+                    color: disabled ? "#90a8bc" : "#2a4a6a",
+                    cursor: disabled ? "not-allowed" : "pointer",
+                    opacity: disabled ? 0.6 : 1,
                   }}
-                />
+                  title={btn.label}
+                >
+                  <span style={{ fontSize: 14 }}>{btn.icon}</span>
+                </button>
+                {!disabled && (
+                  /* Tooltip – only shown when not globally busy */
+                  <div
+                    className="absolute bottom-full left-1/2 mb-1.5 px-2 py-1 rounded-md text-[10px] font-medium whitespace-nowrap pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-50"
+                    style={{
+                      transform: "translateX(-50%)",
+                      background: "#2a4a6a",
+                      color: "#e8f0f8",
+                    }}
+                  >
+                    {btn.label}
+                    <div
+                      className="absolute top-full left-1/2"
+                      style={{
+                        transform: "translateX(-50%)",
+                        width: 0,
+                        height: 0,
+                        borderLeft: "4px solid transparent",
+                        borderRight: "4px solid transparent",
+                        borderTop: "4px solid #2a4a6a",
+                      }}
+                    />
+                  </div>
+                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
