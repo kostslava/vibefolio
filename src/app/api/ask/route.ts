@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenAI } from "@google/genai";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 15;
@@ -9,7 +8,6 @@ export async function POST(req: NextRequest) {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) throw new Error("GEMINI_API_KEY is not set");
 
-    const ai = new GoogleGenAI({ apiKey });
     const { question, systemContext } = await req.json();
 
     if (!question?.trim() || !systemContext?.trim()) {
@@ -19,13 +17,24 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
-      contents: [{ role: "user", parts: [{ text: question }] }],
-      config: { systemInstruction: systemContext },
-    });
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: systemContext }] },
+          contents: [{ role: "user", parts: [{ text: question }] }],
+        }),
+      }
+    );
 
-    const text = response.text ?? "";
+    const data = await res.json();
+    const text: string = data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+    if (!res.ok || !text) {
+      const msg = data.error?.message ?? "Empty response from Gemini";
+      return NextResponse.json({ error: msg }, { status: res.ok ? 500 : res.status });
+    }
     return NextResponse.json({ text });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";

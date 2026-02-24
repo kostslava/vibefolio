@@ -45,17 +45,17 @@ const PRESET_BUTTONS = [
 
 type Phase = "idle" | "loading" | "playing";
 
-const ESTIMATED_MS = 2000; // ~2s for Gemini Flash text response
+const ESTIMATED_MS = 2000;
 
 function Waveform() {
   return (
-    <span className="inline-flex items-end gap-[2px] h-3">
+    <span className="inline-flex items-end gap-[2px] h-3 shrink-0">
       {[0, 1, 2, 3, 4].map((i) => (
         <span
           key={i}
           className="w-[2px] rounded-full"
           style={{
-            background: "#7a94a8",
+            background: "#4a8ab8",
             animation: `wave 0.9s ease-in-out ${i * 0.1}s infinite alternate`,
             height: `${5 + i * 1.5}px`,
           }}
@@ -69,6 +69,7 @@ function Waveform() {
 export default function AIChat({ person }: AIChatProps) {
   const [phase, setPhase] = useState<Phase>("idle");
   const [progress, setProgress] = useState(0);
+  const [replyText, setReplyText] = useState("");
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startTimeRef = useRef<number>(0);
 
@@ -80,19 +81,13 @@ export default function AIChat({ person }: AIChatProps) {
     }
     setProgress(0);
     startTimeRef.current = performance.now();
-    // Exponential ease: fast start, decelerates near 85%
     intervalRef.current = setInterval(() => {
       const elapsed = performance.now() - startTimeRef.current;
       const p = Math.min(85, 85 * (1 - Math.exp(-elapsed / 1200)));
       setProgress(p);
-      if (p >= 85) {
-        clearInterval(intervalRef.current!);
-        intervalRef.current = null;
-      }
+      if (p >= 85) { clearInterval(intervalRef.current!); intervalRef.current = null; }
     }, 80);
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [phase]);
 
   const stopSpeech = () => {
@@ -122,18 +117,20 @@ export default function AIChat({ person }: AIChatProps) {
 
       if (intervalRef.current) clearInterval(intervalRef.current);
       setProgress(100);
-      await new Promise((r) => setTimeout(r, 200));
+      await new Promise((r) => setTimeout(r, 150));
 
+      setReplyText(text);
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.rate = 1.05;
       utterance.pitch = 1;
       utterance.onstart = () => setPhase("playing");
-      utterance.onend = () => { setPhase("idle"); setProgress(0); };
-      utterance.onerror = () => { setPhase("idle"); setProgress(0); };
+      utterance.onend = () => { setPhase("idle"); setProgress(0); setReplyText(""); };
+      utterance.onerror = () => { setPhase("idle"); setProgress(0); setReplyText(""); };
       window.speechSynthesis.speak(utterance);
     } catch {
       setPhase("idle");
       setProgress(0);
+      setReplyText("");
     }
   };
 
@@ -179,6 +176,14 @@ export default function AIChat({ person }: AIChatProps) {
             />
           </div>
         </div>
+      ) : phase === "playing" ? (
+        /* ── Playing: show text + waveform ───────────────────────── */
+        <div className="flex items-start gap-2">
+          <Waveform />
+          <p className="text-[11px] leading-snug" style={{ color: "#2a4a6a" }}>
+            {replyText}
+          </p>
+        </div>
       ) : (
         /* ── Button row ───────────────────────────────────────────── */
         <div className="flex gap-1.5">
@@ -188,9 +193,9 @@ export default function AIChat({ person }: AIChatProps) {
                 onClick={() => handlePreset(btn)}
                 className="w-full flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-lg text-[11px] transition-all duration-150"
                 style={{
-                  background: phase === "idle" ? "#dce8f4" : "#c8d4e0",
+                  background: "#dce8f4",
                   border: "1px solid #a8bece",
-                  color: phase === "idle" ? "#2a4a6a" : "#8aa0b8",
+                  color: "#2a4a6a",
                   cursor: "pointer",
                 }}
                 title={btn.label}
@@ -221,11 +226,6 @@ export default function AIChat({ person }: AIChatProps) {
               </div>
             </div>
           ))}
-          {phase === "playing" && (
-            <div className="flex items-center px-1">
-              <Waveform />
-            </div>
-          )}
         </div>
       )}
     </div>
