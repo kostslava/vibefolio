@@ -4,6 +4,8 @@ export const people: Person[] = [
   {
     id: "1",
     name: "Slava Kostrubin",
+    username: "slava-kostrubin",
+    introTagline: "Full-stack dev making the internet cooler, one project at a time.",
     photo: "",
     bio: "Full-stack developer passionate about building interactive web experiences. I have multiple projects under my belt, including websites, games, ",
     socials: [

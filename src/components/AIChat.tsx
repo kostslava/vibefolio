@@ -30,7 +30,21 @@ function buildSystemContext(person: Person): string {
     ...person.pastProjects.map((p) => `${p.name} (past): ${p.description}`),
   ].join("; ");
   const socials = person.socials.map((s) => `${s.label} ${s.url}`).join(", ");
-  return `Hype-person AI for ${person.name}. 2 sentences max, warm+punchy, facts only.\nBio: ${person.bio}\nWork: ${projects}\nSocials: ${socials}`;
+  return `You're the AI hype-person for ${person.name}. Be witty, confident, and human — like a friend who actually knows them. MAX 2 short sentences. Only include facts relevant to the question. No filler, no "I'd be happy to".
+Bio: ${person.bio}
+Projects: ${projects}
+Socials: ${socials}`;
+}
+
+/** Render a string with **bold** markdown into React nodes */
+function renderMarkdown(text: string): React.ReactNode[] {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return <strong key={i}>{part.slice(2, -2)}</strong>;
+    }
+    return part;
+  });
 }
 
 const PRESET_BUTTONS = [
@@ -38,25 +52,25 @@ const PRESET_BUTTONS = [
     id: "who",
     label: "Who is this?",
     icon: "👤",
-    prompt: (name: string) => `Give a quick punchy intro of who ${name} is.`,
+    prompt: (name: string) => `Quick punchy intro: who is ${name} in one or two sentences?`,
   },
   {
     id: "experience",
     label: "Experience",
     icon: "💼",
-    prompt: (name: string) => `What has ${name} built? Summarize their projects briefly.`,
+    prompt: (name: string) => `What's the most impressive thing ${name} has built? Mention 1-2 projects max.`,
   },
   {
     id: "contact",
     label: "Contact",
     icon: "📬",
-    prompt: (name: string) => `How can someone reach ${name}? Give their socials.`,
+    prompt: (name: string) => `Where can someone find or contact ${name}? List their socials directly.`,
   },
   {
     id: "help",
     label: "Can help with?",
     icon: "🚀",
-    prompt: (name: string) => `What can ${name} help with? What value do they bring?`,
+    prompt: (name: string) => `What specific skills or problems can ${name} help with? Be direct.`,
   },
 ];
 
@@ -233,7 +247,7 @@ export default function AIChat({ person }: AIChatProps) {
         <div className="flex items-start gap-2">
           <Waveform />
           <p className="text-[11px] leading-snug" style={{ color: "#2a4a6a" }}>
-            {replyText}
+            {renderMarkdown(replyText)}
           </p>
         </div>
       ) : (

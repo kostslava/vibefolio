@@ -8,6 +8,8 @@ import AIChat from "@/components/AIChat";
 interface PortfolioWindowProps {
   person: Person;
   onClose: () => void;
+  onMinimize: () => void;
+  minimized?: boolean;
   zIndex: number;
   onFocus: () => void;
   initialRect?: DOMRect;
@@ -82,6 +84,8 @@ const greenCursor = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/200
 export default function PortfolioWindow({
   person,
   onClose,
+  onMinimize,
+  minimized = false,
   zIndex,
   onFocus,
   initialRect,
@@ -94,6 +98,8 @@ export default function PortfolioWindow({
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const [isAnimating, setIsAnimating] = useState(!!initialRect);
+  const [isMaximized, setIsMaximized] = useState(false);
+  const prevRectRef = useRef<{ x: number; y: number; width: number; height: number } | null>(null);
 
   // Edit mode
   const [editMode, setEditMode] = useState(false);
@@ -223,6 +229,23 @@ export default function PortfolioWindow({
     }
   };
 
+  const handleToggleMaximize = useCallback(() => {
+    if (isMaximized) {
+      // Restore
+      if (prevRectRef.current) {
+        setPosition({ x: prevRectRef.current.x, y: prevRectRef.current.y });
+        setSize({ width: prevRectRef.current.width, height: prevRectRef.current.height });
+      }
+      setIsMaximized(false);
+    } else {
+      // Save current, then maximize
+      prevRectRef.current = { x: position.x, y: position.y, width: size.width, height: size.height };
+      setPosition({ x: 0, y: 0 });
+      setSize({ width: window.innerWidth, height: window.innerHeight });
+      setIsMaximized(true);
+    }
+  }, [isMaximized, position, size]);
+
   return (
     <div
       ref={windowRef}
@@ -236,11 +259,15 @@ export default function PortfolioWindow({
         background: "#dce6f0",
         border: "2px solid #8aa0b8",
         userSelect: isDragging || isResizing ? "none" : "auto",
-        transition: isAnimating 
-          ? "all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)" 
-          : isDragging || isResizing 
-            ? "none" 
-            : "box-shadow 0.2s",
+        display: minimized ? "none" : undefined,
+        transition: isMaximized
+          ? "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)"
+          : isAnimating
+            ? "all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)"
+            : isDragging || isResizing
+              ? "none"
+              : "box-shadow 0.2s",
+        borderRadius: isMaximized ? 0 : undefined,
       }}
       onMouseDown={onFocus}
     >
@@ -272,11 +299,12 @@ export default function PortfolioWindow({
               <path d="M1 1L9 9M9 1L1 9" stroke="#7a1410" strokeWidth="1.8" strokeLinecap="round" />
             </svg>
           </button>
-          {/* Yellow — no-op */}
+          {/* Yellow — minimize */}
           <button
+            onClick={onMinimize}
             className="group w-3.5 h-3.5 rounded-full flex items-center justify-center"
             style={{ background: "#febc2e", cursor: yellowCursor }}
-            title="Minimize (not available)"
+            title="Minimize"
           >
             <svg
               className="opacity-0 group-hover:opacity-100 transition-opacity"
@@ -288,11 +316,12 @@ export default function PortfolioWindow({
               <path d="M1.5 5h7" stroke="#7a5000" strokeWidth="1.8" strokeLinecap="round" />
             </svg>
           </button>
-          {/* Green — no-op */}
+          {/* Green — maximize / restore */}
           <button
+            onClick={handleToggleMaximize}
             className="group w-3.5 h-3.5 rounded-full flex items-center justify-center"
             style={{ background: "#28c840", cursor: greenCursor }}
-            title="Full screen (not available)"
+            title={isMaximized ? "Restore" : "Maximise"}
           >
             <svg
               className="opacity-0 group-hover:opacity-100 transition-opacity"
@@ -301,7 +330,10 @@ export default function PortfolioWindow({
               viewBox="0 0 10 10"
               fill="none"
             >
-              <path d="M1 1h3.5M1 1v3.5M9 9H5.5M9 9V5.5" stroke="#0a4a0a" strokeWidth="1.5" strokeLinecap="round" />
+              {isMaximized
+                ? <path d="M3 1L9 1M9 1V7M1 9L7 3" stroke="#0a4a0a" strokeWidth="1.5" strokeLinecap="round" />
+                : <path d="M1 1h3.5M1 1v3.5M9 9H5.5M9 9V5.5" stroke="#0a4a0a" strokeWidth="1.5" strokeLinecap="round" />
+              }
             </svg>
           </button>
         </div>
@@ -369,6 +401,10 @@ export default function PortfolioWindow({
             <div className="grid grid-cols-2 gap-2">
               <EdField label="Name" value={editDraft.name} onChange={(v) => setEditDraft((d) => ({ ...d, name: v }))} />
               <EdField label="Photo URL" value={editDraft.photo} onChange={(v) => setEditDraft((d) => ({ ...d, photo: v }))} placeholder="https://…" />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <EdField label="Username (URL slug)" value={editDraft.username ?? ""} onChange={(v) => setEditDraft((d) => ({ ...d, username: v || undefined }))} placeholder="e.g. slava-kostrubin" />
+              <EdField label="Intro Tagline" value={editDraft.introTagline ?? ""} onChange={(v) => setEditDraft((d) => ({ ...d, introTagline: v || undefined }))} placeholder="One-liner for your landing page" />
             </div>
             <EdField label="Bio" value={editDraft.bio} onChange={(v) => setEditDraft((d) => ({ ...d, bio: v }))} multiline />
 

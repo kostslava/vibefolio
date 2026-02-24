@@ -13,6 +13,8 @@ export interface Project {
 export interface Person {
   id: string;
   name: string;
+  username?: string;      // e.g. "slava-kostrubin" → vibefolio.site/slava-kostrubin
+  introTagline?: string;  // one-liner shown on their personal landing page
   photo: string; // URL or initials fallback
   bio: string;
   socials: {
