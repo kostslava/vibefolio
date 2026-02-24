@@ -80,6 +80,7 @@ function UserIntro({ person }: { person: Person }) {
           }}
         >
           {person.photo
+            // eslint-disable-next-line @next/next/no-img-element
             ? <img src={person.photo} alt={person.name} className="w-full h-full object-cover" />
             : getInitials(person.name)
           }

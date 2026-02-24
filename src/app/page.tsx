@@ -301,6 +301,7 @@ export default function Home() {
                       style={{ background: entry.person.photo ? "transparent" : "#dce6f0", border: "2px solid #8aa0b8", color: "#2a4a6a", boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }}
                     >
                       {entry.person.photo
+                        // eslint-disable-next-line @next/next/no-img-element
                         ? <img src={entry.person.photo} alt={entry.person.name} className="w-full h-full object-cover" />
                         : initials}
                     </div>
@@ -329,6 +330,7 @@ export default function Home() {
                       style={{ background: favicon ? "#fff" : "#dce6f0", border: "2px solid #8aa0b8", color: "#2a4a6a", boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }}
                     >
                       {favicon
+                        // eslint-disable-next-line @next/next/no-img-element
                         ? <img src={favicon} alt={domain} className="w-7 h-7 object-contain" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
                           />
                         : shortName.slice(0, 2).toUpperCase()

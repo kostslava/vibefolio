@@ -52,8 +52,8 @@ export default function ProjectWindow({
 
   // Animation state
   const [animState, setAnimState] = useState<AnimState>("idle");
+  const [dockTranslate, setDockTranslate] = useState({ x: 0, y: 0 });
   const animTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const dockTranslateRef = useRef({ x: 0, y: 0 });
   const prevMinimizedRef = useRef(minimized);
 
   useEffect(() => {
@@ -100,13 +100,14 @@ export default function ProjectWindow({
 
   const handleMinimizeClick = () => {
     if (animTimerRef.current) clearTimeout(animTimerRef.current);
-    dockTranslateRef.current = computeDockTranslate();
+    const t = computeDockTranslate();
+    setDockTranslate(t);
     setAnimState("minimizing");
     animTimerRef.current = setTimeout(() => { onMinimize(); setAnimState("idle"); }, 420);
   };
 
   const getAnimStyle = (): React.CSSProperties => {
-    const { x, y } = dockTranslateRef.current;
+    const { x, y } = dockTranslate;
     switch (animState) {
       case "pre-close": return { transform: "scale(1.05)", transition: "transform 0.07s ease-out" };
       case "closing": return { transform: "scale(0)", opacity: 0, transition: "transform 0.26s cubic-bezier(0.4,0,1,1), opacity 0.22s ease" };
