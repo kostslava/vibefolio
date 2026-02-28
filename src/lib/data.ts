@@ -50,6 +50,7 @@ export const people: Person[] = [
   {
     id: "2",
     name: "Daniel Frank",
+    username: "daniel-frank",
     photo: "",
     bio: "Design thinker & code poet. I build interfaces that people actually want to use.",
     socials: [
@@ -75,6 +76,7 @@ export const people: Person[] = [
   {
     id: "3",
     name: "Isaac Toop",
+    username: "isaac-toop",
     photo: "",
     bio: "Backend sorcerer and API architect. Making servers sing and databases dance.",
     socials: [
@@ -99,6 +101,7 @@ export const people: Person[] = [
   {
     id: "4",
     name: "Evan Lazare",
+    username: "evan-lazare",
     photo: "",
     bio: "Creative technologist exploring the intersection of art, code, and human experience.",
     socials: [
@@ -134,6 +137,7 @@ export const people: Person[] = [
   {
     id: "5",
     name: "Arman Amerian",
+    username: "arman-amerian",
     photo: "",
     bio: "Product engineer with a thing for delightful UX. Building tools that spark joy.",
     socials: [

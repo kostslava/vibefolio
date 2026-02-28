@@ -8,7 +8,6 @@ import ProjectWindow, { getProjectFaviconUrl, getProjectDomain } from "@/compone
 import AboutPage from "@/components/AboutPage";
 import IntroExperience from "@/components/IntroExperience";
 import { Person } from "@/lib/types";
-import { people as defaultPeople } from "@/lib/data";
 
 interface PortfolioEntry {
   person: Person;
@@ -30,7 +29,7 @@ const BASE_Z = 200;
 export default function Home() {
   const [showIntro, setShowIntro] = useState(true);
   const [activeTab, setActiveTab] = useState<"projects" | "about">("projects");
-  const [people, setPeople] = useState<Person[]>(defaultPeople);
+  const [people, setPeople] = useState<Person[]>([]);
   const [openPortfolios, setOpenPortfolios] = useState<PortfolioEntry[]>([]);
   const autoOpenDoneRef = useRef(false);
   // Read ?portfolio= param once on mount to decide whether to skip intro
