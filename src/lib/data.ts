@@ -65,8 +65,8 @@ export const people: Person[] = [
       {
         id: "p4",
         name: "Pontune",
-        dateStarted: "2024",
-        dateEnded: "2025",
+        dateStarted: "Sept 2025",
+        dateEnded: "Jan 2026",
         description: "A coding learning site where people can learn to code through interactive lessons and projects.",
         links: [
           { label: "Live Site", url: "https://pontune.site" },
@@ -93,7 +93,6 @@ export const people: Person[] = [
     socials: [
       { label: "GitHub", url: "https://github.com/isaactoop", icon: "github" },
       { label: "LinkedIn", url: "https://linkedin.com/in/isaactoop", icon: "linkedin" },
-      { label: "Blog", url: "https://isaactoop.dev", icon: "blog" },
     ],
     currentProjects: [],
     pastProjects: [
