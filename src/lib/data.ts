@@ -62,7 +62,7 @@ export const people: Person[] = [
         id: "p4",
         name: "Subwei Empire",
         dateStarted: "Feb 2026",
-        description: "A multiplayer online game where you build and manage your own empire of submarines. It started as a fun side project to learn Phaser.js and now has a small but dedicated player base.",
+        description: "its a tycoon game about owning your own sandwhich building restaurant and you expand and higher more workers (still under dev)",
         links: [
           { label: "Github Repo", url: "https://github.com/danielfrankin85-blip/SubweiEmpire" },
         ],
@@ -71,9 +71,8 @@ export const people: Person[] = [
         id: "p5",
         name: "typeforu",
         dateStarted: "Mar 2026",
-        description: "A multiplayer online game where you build and manage your own empire of submarines. It started as a fun side project to learn Phaser.js and now has a small but dedicated player base.",
+        description: "Not anything yet, will update when i got a repo",
         links: [
-          { label: "Github Repo", url: "https://github.com/danielfrankin85-blip/SubweiEmpire" },
         ],
       },
     ],
