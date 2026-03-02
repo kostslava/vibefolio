@@ -58,11 +58,28 @@ export const people: Person[] = [
       { label: "LinkedIn", url: "https://www.linkedin.com/in/daniel-frank-5b22a5384", icon: "linkedin" },
     ],
     currentProjects: [
-
+      {
+        id: "p4",
+        name: "Subwei Empire",
+        dateStarted: "Feb 2026",
+        description: "A multiplayer online game where you build and manage your own empire of submarines. It started as a fun side project to learn Phaser.js and now has a small but dedicated player base.",
+        links: [
+          { label: "Github Repo", url: "https://github.com/danielfrankin85-blip/SubweiEmpire" },
+        ],
+      },
+      {
+        id: "p5",
+        name: "typeforu",
+        dateStarted: "Mar 2026",
+        description: "A multiplayer online game where you build and manage your own empire of submarines. It started as a fun side project to learn Phaser.js and now has a small but dedicated player base.",
+        links: [
+          { label: "Github Repo", url: "https://github.com/danielfrankin85-blip/SubweiEmpire" },
+        ],
+      },
     ],
     pastProjects: [
       {
-        id: "p4",
+        id: "p6",
         name: "Pontune",
         dateStarted: "Sept 2025",
         dateEnded: "Jan 2026",
@@ -72,7 +89,7 @@ export const people: Person[] = [
         ],
       },
       {
-        id: "p5",
+        id: "p7",
         name: "Rhythm Ai",
         dateStarted: "Jan 2026",
         dateEnded: "Feb 2026",
@@ -118,19 +135,20 @@ export const people: Person[] = [
       { label: "Twitter", url: "https://twitter.com/evanlazare", icon: "twitter" },
       { label: "Instagram", url: "https://instagram.com/evanlazare", icon: "instagram" },
     ],
-    currentProjects: [],
-    pastProjects: [
+    currentProjects: [
       {
         id: "p10",
-        name: "Pixel Poetry",
-        dateStarted: "Jun 2025",
-        dateEnded: "Dec 2025",
+        name: "Level Up",
+        dateStarted: "Feb 2025",
         description: "AI-generated pixel art from text prompts. Tiny art, big vibes.",
         links: [
           { label: "GitHub", url: "https://github.com/evanlazare/pixelpoetry" },
           { label: "Gallery", url: "https://pixelpoetry.art" },
         ],
       },
+    ],
+    pastProjects: [
+
       {
         id: "p11",
         name: "Mood Mixer",
