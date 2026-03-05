@@ -27,21 +27,27 @@ interface ProjectEntry {
 const BASE_Z = 200;
 
 export default function Home() {
-  const [showIntro, setShowIntro] = useState(true);
+  // Read ?portfolio= param once on initial render to decide whether to skip intro
+  const portfolioParamRef = useRef<string | null>(null);
+  const [showIntro, setShowIntro] = useState<boolean>(() => {
+    if (typeof window === "undefined") return true;
+    const p = new URLSearchParams(window.location.search).get("portfolio");
+    return p ? false : true;
+  });
+
+  // store the portfolio param for later (do not call setState here)
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search).get("portfolio");
+    portfolioParamRef.current = p;
+  }, []);
   const [activeTab, setActiveTab] = useState<"projects" | "about">("projects");
   const [people, setPeople] = useState<Person[]>([]);
   const [openPortfolios, setOpenPortfolios] = useState<PortfolioEntry[]>([]);
   const [openProjects, setOpenProjects] = useState<ProjectEntry[]>([]);
-  const [zCounter, setZCounter] = useState(BASE_Z);
+  // z-order counter: useRef so updating it doesn't cause re-renders
+  const zCounterRef = useRef<number>(BASE_Z);
   const keyCounter = useRef(0);
   const autoOpenDoneRef = useRef(false);
-  // Read ?portfolio= param once on mount to decide whether to skip intro
-  const portfolioParamRef = useRef<string | null>(null);
-  useEffect(() => {
-    const p = new URLSearchParams(window.location.search).get("portfolio");
-    portfolioParamRef.current = p;
-    if (p) setShowIntro(false);
-  }, []);
 
   useEffect(() => {
     fetch("/api/people")
@@ -61,7 +67,7 @@ export default function Home() {
     autoOpenDoneRef.current = true;
     const key = ++keyCounter.current;
     const z = BASE_Z + 1;
-    setZCounter(z);
+    zCounterRef.current = z;
     setOpenPortfolios([{ person: match, key, zIndex: z, minimized: false }]);
   }, [people, showIntro]);
 
@@ -69,16 +75,16 @@ export default function Home() {
     // If already open (even minimized), bring to front / restore
     const existing = openPortfolios.find((p) => p.person.id === person.id);
     if (existing) {
-      const z = zCounter + 1;
-      setZCounter(z);
+      const z = zCounterRef.current + 1;
+      zCounterRef.current = z;
       setOpenPortfolios((prev) =>
         prev.map((p) => (p.key === existing.key ? { ...p, zIndex: z, minimized: false } : p))
       );
       return;
     }
     const key = ++keyCounter.current;
-    const z = zCounter + 1;
-    setZCounter(z);
+    const z = zCounterRef.current + 1;
+    zCounterRef.current = z;
     setOpenPortfolios((prev) => [...prev, { person, key, zIndex: z, minimized: false }]);
   };
 
@@ -93,16 +99,16 @@ export default function Home() {
   };
 
   const handleRestorePortfolio = (key: number) => {
-    const z = zCounter + 1;
-    setZCounter(z);
+    const z = zCounterRef.current + 1;
+    zCounterRef.current = z;
     setOpenPortfolios((prev) =>
       prev.map((p) => (p.key === key ? { ...p, minimized: false, zIndex: z } : p))
     );
   };
 
   const handleFocusPortfolio = (key: number) => {
-    const z = zCounter + 1;
-    setZCounter(z);
+    const z = zCounterRef.current + 1;
+    zCounterRef.current = z;
     setOpenPortfolios((prev) =>
       prev.map((p) => (p.key === key ? { ...p, zIndex: z } : p))
     );
@@ -111,14 +117,14 @@ export default function Home() {
   const handleOpenProject = (url: string, title: string) => {
     const existing = openProjects.find((p) => p.url === url);
     if (existing) {
-      const z = zCounter + 1;
-      setZCounter(z);
+      const z = zCounterRef.current + 1;
+      zCounterRef.current = z;
       setOpenProjects((prev) => prev.map((p) => p.key === existing.key ? { ...p, zIndex: z, minimized: false } : p));
       return;
     }
     const key = ++keyCounter.current;
-    const z = zCounter + 1;
-    setZCounter(z);
+    const z = zCounterRef.current + 1;
+    zCounterRef.current = z;
     setOpenProjects((prev) => [...prev, { url, title, key, zIndex: z, minimized: false }]);
   };
 
@@ -131,14 +137,14 @@ export default function Home() {
   };
 
   const handleRestoreProject = (key: number) => {
-    const z = zCounter + 1;
-    setZCounter(z);
+    const z = zCounterRef.current + 1;
+    zCounterRef.current = z;
     setOpenProjects((prev) => prev.map((p) => p.key === key ? { ...p, minimized: false, zIndex: z } : p));
   };
 
   const handleFocusProject = (key: number) => {
-    const z = zCounter + 1;
-    setZCounter(z);
+    const z = zCounterRef.current + 1;
+    zCounterRef.current = z;
     setOpenProjects((prev) =>
       prev.map((p) => (p.key === key ? { ...p, zIndex: z } : p))
     );
