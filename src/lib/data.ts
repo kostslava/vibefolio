@@ -74,13 +74,12 @@ export const people: Person[] = [
       },
       {
         id: "p5",
-        name: "Type Racer Pro",
-        dateStarted: "May 2025",
-        dateEnded: "Oct 2025",
-        description: "Competitive typing game with live multiplayer and custom themes.",
+        name: "Rhythm Ai",
+        dateStarted: "Jan 2026",
+        dateEnded: "Feb 2026",
+        description: "Rhythm game that converts mp3s into playable beat maps",
         links: [
-          { label: "GitHub", url: "https://github.com/danielfrank/typeracer" },
-          { label: "Play", url: "https://typeracerpro.io" },
+          { label: "Play", url: "https://rhythmai.site" },
         ],
       },
     ],
