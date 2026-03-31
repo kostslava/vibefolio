@@ -7,10 +7,10 @@ export const people: Person[] = [
     username: "slava-kostrubin",
     introTagline: "Full-stack dev making the internet cooler, one project at a time.",
     photo: "",
-    bio: "Full-stack developer passionate about building interactive web experiences. I have multiple projects under my belt, including websites, games, ",
+    bio: "Full-stack developer passionate about building interactive web experiences. I have multiple projects under my belt, including websites, games, and tools that make developers' lives easier.",
     socials: [
       { label: "GitHub", url: "https://github.com/kostslava", icon: "github" },
-      { label: "LinkedIn", url: "https://linkedin.com/in/slavakost", icon: "linkedin" },
+      { label: "LinkedIn", url: "https://linkedin.com/in/slava-kostrubin", icon: "linkedin" },
       { label: "Twitter", url: "https://twitter.com/slavakost", icon: "twitter" },
     ],
     currentProjects: [
@@ -28,9 +28,9 @@ export const people: Person[] = [
       {
         id: "p2",
         name: "CasinoDubs",
-        dateStarted: "2024",
-        dateEnded: "2025",
-        description: "A free casino site where you play with credits — no real money, all the fun.",
+        dateStarted: "Jun 2023",
+        dateEnded: "Sept 2025",
+        description: "A free casino site where you play with credits, no real money with all the fun. I mostly stopped editing it, just do some maintenance here and there, it was a really good project to learn front end development and deployment with friends.",
         links: [
           { label: "Live Site", url: "https://casinodubs.ca" },
         ],
@@ -38,8 +38,8 @@ export const people: Person[] = [
       {
         id: "p3",
         name: "Pontune",
-        dateStarted: "2024",
-        dateEnded: "2025",
+        dateStarted: "Sept 2025",
+        dateEnded: "Jan 2026",
         description: "A coding learning site where people can learn to code through interactive lessons and projects.",
         links: [
           { label: "Live Site", url: "https://pontune.site" },
@@ -58,8 +58,20 @@ export const people: Person[] = [
       { label: "LinkedIn", url: "https://linkedin.com/in/danielfrank", icon: "linkedin" },
       { label: "Dribbble", url: "https://dribbble.com/danielfrank", icon: "dribbble" },
     ],
-    currentProjects: [],
+    currentProjects: [
+
+    ],
     pastProjects: [
+      {
+        id: "p4",
+        name: "Pontune",
+        dateStarted: "2024",
+        dateEnded: "2025",
+        description: "A coding learning site where people can learn to code through interactive lessons and projects.",
+        links: [
+          { label: "Live Site", url: "https://pontune.site" },
+        ],
+      },
       {
         id: "p5",
         name: "Type Racer Pro",
