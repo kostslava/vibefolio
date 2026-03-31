@@ -14,7 +14,7 @@ export default function ProjectCard({ project, isCurrent, onOpenProject }: Proje
 
   return (
     <div
-      className="rounded-xl overflow-hidden transition-all duration-300 ease-in-out cursor-pointer"
+      className="shrink-0 rounded-xl overflow-hidden transition-all duration-300 ease-in-out cursor-pointer"
       style={{
         background: "#e8eff5",
         border: "1.5px solid #b8c8d8",

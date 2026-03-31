@@ -586,7 +586,7 @@ export default function PortfolioWindow({
       {/* Projects list */}
       <div
         className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-4 flex flex-col gap-3"
-        style={{ background: "#dce6f0", paddingBottom: "10px" }}
+        style={{ background: "#dce6f0", paddingBottom: "8px" }}
       >
         {projects.length === 0 ? (
           <div
