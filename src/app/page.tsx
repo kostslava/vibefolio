@@ -31,6 +31,9 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<"projects" | "about">("projects");
   const [people, setPeople] = useState<Person[]>([]);
   const [openPortfolios, setOpenPortfolios] = useState<PortfolioEntry[]>([]);
+  const [openProjects, setOpenProjects] = useState<ProjectEntry[]>([]);
+  const [zCounter, setZCounter] = useState(BASE_Z);
+  const keyCounter = useRef(0);
   const autoOpenDoneRef = useRef(false);
   // Read ?portfolio= param once on mount to decide whether to skip intro
   const portfolioParamRef = useRef<string | null>(null);
@@ -61,10 +64,6 @@ export default function Home() {
     setZCounter(z);
     setOpenPortfolios([{ person: match, key, zIndex: z, minimized: false }]);
   }, [people, showIntro]);
-
-  const [openProjects, setOpenProjects] = useState<ProjectEntry[]>([]);
-  const [zCounter, setZCounter] = useState(BASE_Z);
-  const keyCounter = useRef(0);
 
   const handleOpenPortfolio = (person: Person) => {
     // If already open (even minimized), bring to front / restore
