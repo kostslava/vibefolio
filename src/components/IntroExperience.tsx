@@ -6,31 +6,30 @@ interface IntroExperienceProps {
   onComplete: () => void;
 }
 
-export default function IntroExperience({ onComplete }: IntroExperienceProps) {
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
-  const [particles, setParticles] = useState<Array<{ id: number; x: number; y: number; delay: number }>>([]);
+interface Particle {
+  id: number;
+  x: number;
+  y: number;
+  size: number;
+  delay: number;
+  duration: number;
+}
 
-  useEffect(() => {
-    // Generate floating particles
-    const newParticles = Array.from({ length: 20 }, (_, i) => ({
+export default function IntroExperience({ onComplete }: IntroExperienceProps) {
+  // Generate floating particles with pre-calculated random values once
+  const [particles] = useState<Particle[]>(() =>
+    Array.from({ length: 20 }, (_, i) => ({
       id: i,
       x: Math.random() * 100,
       y: Math.random() * 100,
+      size: Math.random() * 40 + 20,
       delay: Math.random() * 2,
-    }));
-    setParticles(newParticles);
-  }, []);
-
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      setMousePos({ x: e.clientX, y: e.clientY });
-    };
-    window.addEventListener("mousemove", handleMouseMove);
-    return () => window.removeEventListener("mousemove", handleMouseMove);
-  }, []);
+      duration: Math.random() * 3 + 4,
+    }))
+  );
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden" style={{ background: "#f0f0f0" }}>
+    <div className="fixed inset-0 z-50 overflow-hidden cursor-custom" style={{ background: "#f0f0f0" }}>
       {/* Checkered background pattern */}
       <div
         className="absolute inset-0"
@@ -54,39 +53,20 @@ export default function IntroExperience({ onComplete }: IntroExperienceProps) {
           style={{
             left: `${particle.x}%`,
             top: `${particle.y}%`,
-            width: `${Math.random() * 40 + 20}px`,
-            height: `${Math.random() * 40 + 20}px`,
+            width: `${particle.size}px`,
+            height: `${particle.size}px`,
             background: `linear-gradient(135deg, #c8d8e8, #a0b4c8)`,
             border: "2px solid #8aa0b8",
             animationDelay: `${particle.delay}s`,
-            animationDuration: `${Math.random() * 3 + 4}s`,
+            animationDuration: `${particle.duration}s`,
           }}
         />
       ))}
 
-      {/* Mouse follower effect */}
-      <div
-        className="pointer-events-none fixed rounded-full transition-all duration-500 ease-out opacity-20"
-        style={{
-          left: mousePos.x - 100,
-          top: mousePos.y - 100,
-          width: "200px",
-          height: "200px",
-          background: "radial-gradient(circle, #a0b4c8, transparent 70%)",
-        }}
-      />
-
       {/* Main content */}
       <div className="relative z-10 h-full flex flex-col items-center justify-center px-6">
-        {/* Logo/Title with parallax effect */}
-        <div
-          className="mb-8 transform transition-transform duration-100"
-          style={{
-            transform: typeof window !== 'undefined' 
-              ? `translate(${(mousePos.x - window.innerWidth / 2) * 0.02}px, ${(mousePos.y - window.innerHeight / 2) * 0.02}px)`
-              : 'translate(0, 0)',
-          }}
-        >
+        {/* Logo/Title */}
+        <div className="mb-8">
           <h1
             className="text-7xl font-serif italic font-bold mb-4 animate-slideDown"
             style={{
@@ -130,7 +110,7 @@ export default function IntroExperience({ onComplete }: IntroExperienceProps) {
         {/* Call to action button */}
         <button
           onClick={onComplete}
-          className="group relative px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-300 hover:scale-105 active:scale-95 animate-fadeIn"
+          className="group relative px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-300 hover:scale-105 active:scale-95 animate-fadeIn cursor-pointer"
           style={{
             background: "#c8d8e8",
             border: "3px solid #a0b4c8",

@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import { Person } from "@/lib/types";
 
 interface PersonCardProps {
@@ -47,9 +48,11 @@ export default function PersonCard({ person, onClick, isHighlighted = false }: P
         }}
       >
         {person.photo ? (
-          <img
+          <Image
             src={person.photo}
             alt={person.name}
+            width={64}
+            height={64}
             className="w-full h-full rounded-full object-cover"
           />
         ) : (

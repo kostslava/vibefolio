@@ -23,6 +23,15 @@ body {
   min-height: 100vh;
   color: #171717;
   font-family: Arial, Helvetica, sans-serif;
+  cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="%232a4a6a" stroke="%23c8d8e8" stroke-width="2"><circle cx="12" cy="12" r="8"/></svg>') 12 12, auto;
+}
+
+.cursor-custom {
+  cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="%232a4a6a" stroke="%23c8d8e8" stroke-width="2"><circle cx="12" cy="12" r="8"/></svg>') 12 12, auto;
+}
+
+button, a, [role="button"] {
+  cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="%234a8ab8" stroke="%23ffffff" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3" fill="%23ffffff"/></svg>') 14 14, pointer;
 }
 
 /* Custom scrollbar */
