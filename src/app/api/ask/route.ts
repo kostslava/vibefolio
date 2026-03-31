@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenAI } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+export const dynamic = "force-dynamic";
 
 /**
  * Wraps raw PCM audio bytes in a proper WAV container so browsers can play it.
@@ -36,6 +36,12 @@ function pcmToWav(
 
 export async function POST(req: NextRequest) {
   try {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      throw new Error("GEMINI_API_KEY is not set in environment variables");
+    }
+
+    const ai = new GoogleGenAI({ apiKey });
     const { question, systemContext } = await req.json();
 
     if (!question?.trim() || !systemContext?.trim()) {
