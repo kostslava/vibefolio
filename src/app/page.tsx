@@ -12,6 +12,7 @@ import { people } from "@/lib/data";
 interface OpenWindow {
   person: Person;
   zIndex: number;
+  initialRect?: DOMRect;
 }
 
 export default function Home() {
@@ -44,7 +45,7 @@ export default function Home() {
   );
 
   const handlePersonClick = useCallback(
-    (person: Person) => {
+    (person: Person, cardRect: DOMRect) => {
       // Don't open duplicate windows
       if (openWindows.some((w) => w.person.id === person.id)) {
         // Just bring it to front
@@ -58,7 +59,7 @@ export default function Home() {
       }
       const newZ = maxZ + 1;
       setMaxZ(newZ);
-      setOpenWindows((prev) => [...prev, { person, zIndex: newZ }]);
+      setOpenWindows((prev) => [...prev, { person, zIndex: newZ, initialRect: cardRect }]);
     },
     [openWindows, maxZ]
   );
@@ -148,6 +149,7 @@ export default function Home() {
           zIndex={win.zIndex}
           onClose={() => handleCloseWindow(win.person.id)}
           onFocus={() => handleFocusWindow(win.person.id)}
+          initialRect={win.initialRect}
         />
       ))}
 

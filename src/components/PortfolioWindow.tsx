@@ -9,6 +9,7 @@ interface PortfolioWindowProps {
   onClose: () => void;
   zIndex: number;
   onFocus: () => void;
+  initialRect?: DOMRect;
 }
 
 function getInitials(name: string): string {
@@ -24,15 +25,20 @@ export default function PortfolioWindow({
   onClose,
   zIndex,
   onFocus,
+  initialRect,
 }: PortfolioWindowProps) {
   const [activeTab, setActiveTab] = useState<"current" | "past">("current");
   const [profileExpanded, setProfileExpanded] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
+  const [isAnimating, setIsAnimating] = useState(!!initialRect);
 
-  // Initialize position with random offset from center
+  // Initialize position - either from card position or centered
   const [position, setPosition] = useState(() => {
     if (typeof window === 'undefined') return { x: 100, y: 100 };
+    if (initialRect) {
+      return { x: initialRect.left, y: initialRect.top };
+    }
     const vw = window.innerWidth;
     const vh = window.innerHeight;
     const initialX = Math.max(20, (vw - 480) / 2 + (Math.random() - 0.5) * 80);
@@ -40,7 +46,30 @@ export default function PortfolioWindow({
     return { x: initialX, y: initialY };
   });
   
-  const [size, setSize] = useState({ width: 480, height: 520 });
+  const [size, setSize] = useState(() => {
+    if (initialRect) {
+      return { width: initialRect.width, height: initialRect.height };
+    }
+    return { width: 480, height: 520 };
+  });
+
+  // Animate from card to window
+  useEffect(() => {
+    if (!initialRect || !isAnimating) return;
+    
+    const timer = setTimeout(() => {
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const targetX = Math.max(20, (vw - 480) / 2);
+      const targetY = Math.max(20, (vh - 520) / 2);
+      
+      setPosition({ x: targetX, y: targetY });
+      setSize({ width: 480, height: 520 });
+      setIsAnimating(false);
+    }, 50);
+    
+    return () => clearTimeout(timer);
+  }, [initialRect, isAnimating]);
 
   const windowRef = useRef<HTMLDivElement>(null);
   const dragOffset = useRef({ x: 0, y: 0 });
@@ -124,7 +153,11 @@ export default function PortfolioWindow({
         background: "#dce6f0",
         border: "2px solid #8aa0b8",
         userSelect: isDragging || isResizing ? "none" : "auto",
-        transition: isDragging || isResizing ? "none" : "box-shadow 0.2s",
+        transition: isAnimating 
+          ? "all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)" 
+          : isDragging || isResizing 
+            ? "none" 
+            : "box-shadow 0.2s",
       }}
       onMouseDown={onFocus}
     >
