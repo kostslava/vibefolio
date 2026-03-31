@@ -211,14 +211,13 @@ export default function AIChat({ person }: AIChatProps) {
             <div key={btn.id} className="relative flex-1 group">
               <button
                 onClick={() => handlePreset(btn)}
-                disabled={phase === "loading"}
                 className="w-full flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-lg text-[11px] transition-all duration-150"
                 style={{
                   background: phase === "idle" ? "#dce8f4" : "#c8d4e0",
                   border: "1px solid #a8bece",
                   color: phase === "idle" ? "#2a4a6a" : "#8aa0b8",
-                  opacity: phase === "loading" ? 0.55 : 1,
-                  cursor: phase === "loading" ? "not-allowed" : "pointer",
+                  opacity: 1,
+                  cursor: "pointer",
                 }}
                 title={btn.label}
               >
