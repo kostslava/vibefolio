@@ -58,11 +58,13 @@ export default function ProjectWindow({
 
   useEffect(() => {
     if (prevMinimizedRef.current === true && minimized === false) {
-      setAnimState("init-restore");
-      requestAnimationFrame(() => requestAnimationFrame(() => {
-        setAnimState("restoring");
-        animTimerRef.current = setTimeout(() => setAnimState("idle"), 500);
-      }));
+      requestAnimationFrame(() => {
+        setAnimState("init-restore");
+        requestAnimationFrame(() => {
+          setAnimState("restoring");
+          animTimerRef.current = setTimeout(() => setAnimState("idle"), 500);
+        });
+      });
     }
     prevMinimizedRef.current = minimized;
   }, [minimized]);
