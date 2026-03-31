@@ -5,9 +5,16 @@ import React from "react";
 interface HeaderProps {
   activeTab: "projects" | "about";
   onTabChange: (tab: "projects" | "about") => void;
+  searchQuery?: string;
+  onSearchChange?: (query: string) => void;
 }
 
-export default function Header({ activeTab, onTabChange }: HeaderProps) {
+export default function Header({ 
+  activeTab, 
+  onTabChange, 
+  searchQuery = "", 
+  onSearchChange 
+}: HeaderProps) {
   return (
     <header
       className="sticky top-0 z-50 flex items-center justify-between px-6 py-3 mx-4 mt-4 rounded-xl"
@@ -52,6 +59,41 @@ export default function Header({ activeTab, onTabChange }: HeaderProps) {
           </button>
         </nav>
       </div>
+      
+      {/* Search bar (only show on projects tab) */}
+      {activeTab === "projects" && onSearchChange && (
+        <div className="flex-1 max-w-md mx-6">
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Search people..."
+              value={searchQuery}
+              onChange={(e) => onSearchChange(e.target.value)}
+              className="w-full px-4 py-2 pr-10 rounded-lg text-sm outline-none transition-all duration-200"
+              style={{
+                background: "#ffffff",
+                border: "1.5px solid #a0b4c8",
+                color: "#2a4a6a",
+              }}
+            />
+            <svg
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#6b8dad"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <circle cx="11" cy="11" r="8" />
+              <path d="m21 21-4.35-4.35" />
+            </svg>
+          </div>
+        </div>
+      )}
+      
       <button
         className="p-2 rounded-lg transition-colors duration-200 cursor-pointer"
         style={{ color: "#4a6a8a" }}
