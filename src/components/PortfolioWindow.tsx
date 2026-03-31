@@ -32,6 +32,8 @@ const MOBILE_BREAKPOINT = 768;
 const MOBILE_GUTTER = 0;
 const MOBILE_TOP = 0;
 const MOBILE_BOTTOM_OFFSET = 0;
+const DESKTOP_DEFAULT_WIDTH = 480;
+const DESKTOP_DEFAULT_HEIGHT = 580;
 
 export default function PortfolioWindow({
   person,
@@ -90,8 +92,8 @@ export default function PortfolioWindow({
     if (vw <= MOBILE_BREAKPOINT) {
       return { x: MOBILE_GUTTER, y: MOBILE_TOP };
     }
-    const initialX = Math.max(20, (vw - 480) / 2 + (Math.random() - 0.5) * 80);
-    const initialY = Math.max(20, (vh - 520) / 2 + (Math.random() - 0.5) * 60);
+    const initialX = Math.max(20, (vw - DESKTOP_DEFAULT_WIDTH) / 2 + (Math.random() - 0.5) * 80);
+    const initialY = Math.max(20, (vh - DESKTOP_DEFAULT_HEIGHT) / 2 + (Math.random() - 0.5) * 60);
     return { x: initialX, y: initialY };
   });
   
@@ -105,7 +107,7 @@ export default function PortfolioWindow({
         height: Math.max(360, window.innerHeight - MOBILE_BOTTOM_OFFSET),
       };
     }
-    return { width: 480, height: 520 };
+    return { width: DESKTOP_DEFAULT_WIDTH, height: DESKTOP_DEFAULT_HEIGHT };
   });
 
   const isMobile = viewport.width <= MOBILE_BREAKPOINT;
@@ -132,10 +134,10 @@ export default function PortfolioWindow({
           height: Math.max(320, vh - MOBILE_TOP - MOBILE_BOTTOM_OFFSET),
         });
       } else {
-        const targetX = Math.max(20, (vw - 480) / 2);
-        const targetY = Math.max(20, (vh - 520) / 2);
+        const targetX = Math.max(20, (vw - DESKTOP_DEFAULT_WIDTH) / 2);
+        const targetY = Math.max(20, (vh - DESKTOP_DEFAULT_HEIGHT) / 2);
         setPosition({ x: targetX, y: targetY });
-        setSize({ width: 480, height: 520 });
+        setSize({ width: DESKTOP_DEFAULT_WIDTH, height: DESKTOP_DEFAULT_HEIGHT });
       }
       setIsAnimating(false);
     }, 50);
@@ -214,7 +216,7 @@ export default function PortfolioWindow({
         const dy = e.clientY - dragOffset.current.y;
         setSize((prev) => ({
           width: Math.min(Math.max(360, prev.width + dx), viewport.width),
-          height: Math.min(Math.max(300, prev.height + dy), viewport.height),
+          height: Math.min(Math.max(380, prev.height + dy), viewport.height),
         }));
         dragOffset.current = { x: e.clientX, y: e.clientY };
       }
@@ -583,8 +585,8 @@ export default function PortfolioWindow({
 
       {/* Projects list */}
       <div
-        className="flex-1 overflow-y-auto p-3 sm:p-4 flex flex-col gap-3"
-        style={{ background: "#dce6f0" }}
+        className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-4 flex flex-col gap-3"
+        style={{ background: "#dce6f0", paddingBottom: "10px" }}
       >
         {projects.length === 0 ? (
           <div
