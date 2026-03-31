@@ -90,13 +90,21 @@ export default function AIChat({ person }: AIChatProps) {
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [phase]);
 
-  const stopSpeech = () => {
-    if (typeof window !== "undefined") window.speechSynthesis.cancel();
+
+
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const stopAudio = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.src = "";
+      audioRef.current = null;
+    }
   };
 
   const handlePreset = async (btn: (typeof PRESET_BUTTONS)[number]) => {
     if (phase === "loading") return;
-    stopSpeech();
+    stopAudio();
     setPhase("loading");
     setProgress(0);
 
@@ -117,16 +125,26 @@ export default function AIChat({ person }: AIChatProps) {
 
       if (intervalRef.current) clearInterval(intervalRef.current);
       setProgress(100);
-      await new Promise((r) => setTimeout(r, 150));
-
       setReplyText(text);
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = 1.05;
-      utterance.pitch = 1;
-      utterance.onstart = () => setPhase("playing");
-      utterance.onend = () => { setPhase("idle"); setProgress(0); setReplyText(""); };
-      utterance.onerror = () => { setPhase("idle"); setProgress(0); setReplyText(""); };
-      window.speechSynthesis.speak(utterance);
+
+      if (data.audioBase64) {
+        // Play native Gemini TTS audio (WAV)
+        const blob = new Blob(
+          [Uint8Array.from(atob(data.audioBase64), (c) => c.charCodeAt(0))],
+          { type: "audio/wav" }
+        );
+        const url = URL.createObjectURL(blob);
+        const audio = new Audio(url);
+        audioRef.current = audio;
+        audio.onplay = () => setPhase("playing");
+        audio.onended = () => { setPhase("idle"); setProgress(0); setReplyText(""); URL.revokeObjectURL(url); };
+        audio.onerror = () => { setPhase("idle"); setProgress(0); setReplyText(""); URL.revokeObjectURL(url); };
+        await audio.play();
+      } else {
+        // TTS unavailable – show text briefly then reset
+        setPhase("playing");
+        setTimeout(() => { setPhase("idle"); setProgress(0); setReplyText(""); }, 6000);
+      }
     } catch {
       setPhase("idle");
       setProgress(0);
