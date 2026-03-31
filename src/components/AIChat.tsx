@@ -51,28 +51,59 @@ const PRESET_BUTTONS = [
   {
     id: "who",
     label: "Who is this?",
-    icon: "👤",
     prompt: (name: string) => `Quick punchy intro: who is ${name} in one or two sentences?`,
   },
   {
     id: "experience",
     label: "Experience",
-    icon: "💼",
     prompt: (name: string) => `What's the most impressive thing ${name} has built? Mention 1-2 projects max.`,
   },
   {
     id: "contact",
     label: "Contact",
-    icon: "📬",
     prompt: (name: string) => `Where can someone find or contact ${name}? List their socials directly.`,
   },
   {
     id: "help",
     label: "Can help with?",
-    icon: "🚀",
     prompt: (name: string) => `What specific skills or problems can ${name} help with? Be direct.`,
   },
 ];
+
+function PresetIcon({ id }: { id: string }) {
+  if (id === "who") {
+    return (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M20 21a8 8 0 0 0-16 0" />
+        <circle cx="12" cy="7" r="4" />
+      </svg>
+    );
+  }
+  if (id === "experience") {
+    return (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <rect x="2" y="7" width="20" height="14" rx="2" />
+        <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" />
+      </svg>
+    );
+  }
+  if (id === "contact") {
+    return (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" />
+        <path d="m22 6-10 7L2 6" />
+      </svg>
+    );
+  }
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M5 13c0 5 4 8 7 8s7-3 7-8V6l-7-4-7 4z" />
+      <path d="M12 12l4-4" />
+      <path d="M16 8h-3" />
+      <path d="M16 8v3" />
+    </svg>
+  );
+}
 
 type Phase = "idle" | "loading" | "playing";
 
@@ -271,7 +302,9 @@ export default function AIChat({ person }: AIChatProps) {
                   title={btn.label}
                   aria-label={btn.label}
                 >
-                  <span style={{ fontSize: 14 }}>{btn.icon}</span>
+                  <span aria-hidden="true" className="leading-none">
+                    <PresetIcon id={btn.id} />
+                  </span>
                   <span className="text-[10px] leading-none sm:hidden">{btn.label}</span>
                 </button>
                 {!disabled && (

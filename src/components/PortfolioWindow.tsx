@@ -30,7 +30,7 @@ const greenCursor = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/200
 
 const MOBILE_BREAKPOINT = 768;
 const MOBILE_GUTTER = 0;
-const MOBILE_TOP = 64;
+const MOBILE_TOP = 0;
 const MOBILE_BOTTOM_OFFSET = 0;
 
 export default function PortfolioWindow({
