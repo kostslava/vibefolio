@@ -90,7 +90,7 @@ export default function ProjectCard({ project, isCurrent, onOpenProject }: Proje
       >
         <div onClick={(e) => e.stopPropagation()}>
         <div
-          className="px-5 pb-6 pt-0"
+          className="px-5 pb-2.5 pt-0"
           style={{ borderTop: "1px solid #c8d8e8" }}
         >
           <p
@@ -99,7 +99,7 @@ export default function ProjectCard({ project, isCurrent, onOpenProject }: Proje
           >
             {project.description}
           </p>
-          <div className="flex flex-wrap gap-2 mb-6">
+          <div className="flex flex-wrap gap-2">
             {project.links.map((link, i) => (
               onOpenProject ? (
                 <button
