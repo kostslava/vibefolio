@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const response = await (ai.models as any).generateContent({
-      model: "gemini-2.5-flash-preview-native-audio-dialog",
+      model: "gemini-2.5-flash-native-audio-preview-12-2025",
       contents: [{ role: "user", parts: [{ text: question }] }],
       config: {
         systemInstruction: systemContext,
