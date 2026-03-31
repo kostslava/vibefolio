@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect } from "react";
 import Header from "@/components/Header";
 import SearchLauncher from "@/components/SearchLauncher";
 import PortfolioWindow from "@/components/PortfolioWindow";
-import ProjectWindow from "@/components/ProjectWindow";
+import ProjectWindow, { getProjectFaviconUrl, getProjectDomain } from "@/components/ProjectWindow";
 import AboutPage from "@/components/AboutPage";
 import IntroExperience from "@/components/IntroExperience";
 import { Person } from "@/lib/types";
@@ -22,6 +22,7 @@ interface ProjectEntry {
   title: string;
   key: number;
   zIndex: number;
+  minimized: boolean;
 }
 
 const BASE_Z = 200;
@@ -153,14 +154,31 @@ export default function Home() {
   };
 
   const handleOpenProject = (url: string, title: string) => {
+    const existing = openProjects.find((p) => p.url === url);
+    if (existing) {
+      const z = zCounter + 1;
+      setZCounter(z);
+      setOpenProjects((prev) => prev.map((p) => p.key === existing.key ? { ...p, zIndex: z, minimized: false } : p));
+      return;
+    }
     const key = ++keyCounter.current;
     const z = zCounter + 1;
     setZCounter(z);
-    setOpenProjects((prev) => [...prev, { url, title, key, zIndex: z }]);
+    setOpenProjects((prev) => [...prev, { url, title, key, zIndex: z, minimized: false }]);
   };
 
   const handleCloseProject = (key: number) => {
     setOpenProjects((prev) => prev.filter((p) => p.key !== key));
+  };
+
+  const handleMinimizeProject = (key: number) => {
+    setOpenProjects((prev) => prev.map((p) => p.key === key ? { ...p, minimized: true } : p));
+  };
+
+  const handleRestoreProject = (key: number) => {
+    const z = zCounter + 1;
+    setZCounter(z);
+    setOpenProjects((prev) => prev.map((p) => p.key === key ? { ...p, minimized: false, zIndex: z } : p));
   };
 
   const handleFocusProject = (key: number) => {
@@ -249,13 +267,15 @@ export default function Home() {
               url={entry.url}
               title={entry.title}
               zIndex={entry.zIndex}
+              minimized={entry.minimized}
               onClose={() => handleCloseProject(entry.key)}
+              onMinimize={() => handleMinimizeProject(entry.key)}
               onFocus={() => handleFocusProject(entry.key)}
             />
           ))}
 
           {/* macOS-style taskbar for minimized windows */}
-          {openPortfolios.some((e) => e.minimized) && (
+          {(openPortfolios.some((e) => e.minimized) || openProjects.some((e) => e.minimized)) && (
             <div
               className="fixed bottom-4 left-1/2 -translate-x-1/2 flex items-end gap-2 px-4 py-2 rounded-2xl z-[9999]"
               style={{
@@ -265,9 +285,9 @@ export default function Home() {
                 boxShadow: "0 8px 32px rgba(0,0,0,0.15)",
               }}
             >
+              {/* Minimized portfolio windows */}
               {openPortfolios.filter((e) => e.minimized).map((entry) => {
-                const initials = entry.person.name
-                  .split(" ").map((n) => n[0]).join("").toUpperCase();
+                const initials = entry.person.name.split(" ").map((n) => n[0]).join("").toUpperCase();
                 return (
                   <button
                     key={entry.key}
@@ -278,25 +298,45 @@ export default function Home() {
                   >
                     <div
                       className="w-12 h-12 rounded-xl flex items-center justify-center text-sm font-bold overflow-hidden"
-                      style={{
-                        background: entry.person.photo ? "transparent" : "#dce6f0",
-                        border: "2px solid #8aa0b8",
-                        color: "#2a4a6a",
-                        boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
-                      }}
+                      style={{ background: entry.person.photo ? "transparent" : "#dce6f0", border: "2px solid #8aa0b8", color: "#2a4a6a", boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }}
                     >
                       {entry.person.photo
                         ? <img src={entry.person.photo} alt={entry.person.name} className="w-full h-full object-cover" />
-                        : initials
-                      }
+                        : initials}
                     </div>
-                    <span
-                      className="text-[9px] font-medium opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap"
-                      style={{ color: "#2a4a6a" }}
-                    >
+                    <span className="text-[9px] font-medium opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap" style={{ color: "#2a4a6a" }}>
                       {entry.person.name.split(" ")[0]}
                     </span>
-                    {/* Dot indicator */}
+                    <div className="w-1 h-1 rounded-full" style={{ background: "#4a8ab8" }} />
+                  </button>
+                );
+              })}
+              {/* Minimized project/site windows */}
+              {openProjects.filter((e) => e.minimized).map((entry) => {
+                const favicon = getProjectFaviconUrl(entry.url);
+                const domain = getProjectDomain(entry.url);
+                const shortName = domain.replace(/^www\./, "").split(".")[0];
+                return (
+                  <button
+                    key={entry.key}
+                    onClick={() => handleRestoreProject(entry.key)}
+                    title={entry.title}
+                    className="group flex flex-col items-center gap-1 transition-transform duration-150 hover:scale-110 active:scale-95"
+                    style={{ cursor: "pointer" }}
+                  >
+                    <div
+                      className="w-12 h-12 rounded-xl flex items-center justify-center text-sm font-bold overflow-hidden"
+                      style={{ background: favicon ? "#fff" : "#dce6f0", border: "2px solid #8aa0b8", color: "#2a4a6a", boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }}
+                    >
+                      {favicon
+                        ? <img src={favicon} alt={domain} className="w-7 h-7 object-contain" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                          />
+                        : shortName.slice(0, 2).toUpperCase()
+                      }
+                    </div>
+                    <span className="text-[9px] font-medium opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap" style={{ color: "#2a4a6a" }}>
+                      {shortName}
+                    </span>
                     <div className="w-1 h-1 rounded-full" style={{ background: "#4a8ab8" }} />
                   </button>
                 );
