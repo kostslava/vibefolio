@@ -3,6 +3,7 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import { Person } from "@/lib/types";
 import ProjectCard from "@/components/ProjectCard";
+import AIChat from "@/components/AIChat";
 
 interface PortfolioWindowProps {
   person: Person;
@@ -354,6 +355,9 @@ export default function PortfolioWindow({
           </div>
         </div>
       </div>
+
+      {/* AI Chat drawer */}
+      <AIChat person={person} />
 
       {/* Tabs */}
       <div
