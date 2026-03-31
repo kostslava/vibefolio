@@ -10,7 +10,8 @@ interface AIChatProps {
 interface Message {
   id: number;
   role: "user" | "assistant";
-  text: string;
+  text: string; // empty string for audio-only assistant messages
+  audioOnly?: boolean;
 }
 
 /** Build a rich system prompt from the person's portfolio data */
@@ -123,9 +124,11 @@ export default function AIChat({ person }: AIChatProps) {
       const aiMsg: Message = {
         id: ++msgIdRef.current,
         role: "assistant",
-        text: data.text ?? "🔊",
+        text: "",
+        audioOnly: true,
       };
       setMessages((prev) => [...prev, aiMsg]);
+      const aiMsgId = aiMsg.id;
 
       if (data.audioBase64) {
         const bytes = Uint8Array.from(atob(data.audioBase64), (c) =>
@@ -140,6 +143,10 @@ export default function AIChat({ person }: AIChatProps) {
         audioRef.current.onended = () => {
           setPlaying(false);
           URL.revokeObjectURL(url);
+          // Mark the message as done playing
+          setMessages((prev) =>
+            prev.map((m) => (m.id === aiMsgId ? { ...m, audioOnly: false, text: "✓" } : m))
+          );
         };
         audioRef.current.onerror = () => {
           setPlaying(false);
@@ -229,7 +236,7 @@ export default function AIChat({ person }: AIChatProps) {
           {messages.map((m) => (
             <div
               key={m.id}
-              className="text-xs rounded-xl px-3 py-2 max-w-[88%] leading-relaxed"
+              className="text-xs rounded-xl px-3 py-2 max-w-[88%] leading-relaxed flex items-center gap-1.5"
               style={{
                 alignSelf: m.role === "user" ? "flex-end" : "flex-start",
                 background: m.role === "user" ? "#3a7ab8" : "#e8f0f8",
@@ -237,7 +244,16 @@ export default function AIChat({ person }: AIChatProps) {
                 border: m.role === "assistant" ? "1px solid #b4c8dc" : "none",
               }}
             >
-              {m.text}
+              {m.audioOnly ? (
+                <>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/>
+                  </svg>
+                  <Waveform />
+                </>
+              ) : (
+                m.text
+              )}
             </div>
           ))}
 

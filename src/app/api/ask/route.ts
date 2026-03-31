@@ -45,7 +45,6 @@ export async function POST(req: NextRequest) {
     }
 
     const audioParts: Buffer[] = [];
-    let collectedText = "";
 
     const audioBase64 = await new Promise<string | null>((resolve, reject) => {
       ai.live
@@ -66,7 +65,6 @@ export async function POST(req: NextRequest) {
                 if (part.inlineData?.data) {
                   audioParts.push(Buffer.from(part.inlineData.data, "base64"));
                 }
-                if (part.text) collectedText += part.text;
               }
               if (msg?.serverContent?.turnComplete) {
                 resolve(
@@ -80,7 +78,6 @@ export async function POST(req: NextRequest) {
           },
         })
         .then((session) => {
-          // Send the question once connection is established
           session.sendClientContent({
             turns: [{ role: "user", parts: [{ text: question }] }],
             turnComplete: true,
@@ -89,7 +86,7 @@ export async function POST(req: NextRequest) {
         .catch(reject);
     });
 
-    return NextResponse.json({ audioBase64, text: collectedText || null });
+    return NextResponse.json({ audioBase64 });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error("[/api/ask]", message);
