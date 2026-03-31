@@ -104,8 +104,8 @@ export default function PortfolioWindow({
   // Window animation state
   type AnimState = "idle" | "pre-close" | "closing" | "minimizing" | "init-restore" | "restoring";
   const [animState, setAnimState] = useState<AnimState>("idle");
+  const [dockTranslate, setDockTranslate] = useState({ x: 0, y: 0 });
   const animTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const dockTranslateRef = useRef({ x: 0, y: 0 });
   const prevMinimizedRef = useRef(minimized);
 
   // Watch minimized prop: when it flips true→false, play restore animation
@@ -286,7 +286,8 @@ export default function PortfolioWindow({
 
   const handleMinimizeClick = () => {
     if (animTimerRef.current) clearTimeout(animTimerRef.current);
-    dockTranslateRef.current = computeDockTranslate();
+    const t = computeDockTranslate();
+    setDockTranslate(t);
     setAnimState("minimizing");
     animTimerRef.current = setTimeout(() => {
       onMinimize();
@@ -295,7 +296,7 @@ export default function PortfolioWindow({
   };
 
   const getAnimStyle = (): React.CSSProperties => {
-    const { x, y } = dockTranslateRef.current;
+    const { x, y } = dockTranslate;
     switch (animState) {
       case "pre-close":
         return { transform: "scale(1.05)", transition: "transform 0.07s ease-out" };
