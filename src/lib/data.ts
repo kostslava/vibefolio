@@ -56,7 +56,6 @@ export const people: Person[] = [
     socials: [
       { label: "GitHub", url: "https://github.com/danielfrankin85-blip", icon: "github" },
       { label: "LinkedIn", url: "https://www.linkedin.com/in/daniel-frank-5b22a5384", icon: "linkedin" },
-      { label: "Niggler", url: "https://dribbble.com/danielfrank", icon: "dribbble" },
     ],
     currentProjects: [
 
