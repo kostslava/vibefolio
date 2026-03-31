@@ -84,15 +84,11 @@ export default function ProjectCard({ project, isCurrent, onOpenProject }: Proje
       <div
         className="overflow-hidden transition-all duration-300 ease-in-out"
         style={{
-          maxHeight: expanded ? "500px" : "0px",
+          maxHeight: expanded ? "none" : "0px",
           opacity: expanded ? 1 : 0,
         }}
       >
-        <div
-          className="overflow-y-auto"
-          style={{ maxHeight: "500px" }}
-          onClick={(e) => e.stopPropagation()}
-        >
+        <div onClick={(e) => e.stopPropagation()}>
         <div
           className="px-5 pb-6 pt-0"
           style={{ borderTop: "1px solid #c8d8e8" }}
