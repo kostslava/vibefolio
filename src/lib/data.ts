@@ -16,32 +16,31 @@ export const people: Person[] = [
         id: "p1",
         name: "Vibefolio",
         dateStarted: "Feb 2026",
-        description: "A playful portfolio platform where creativity meets functionality. Dragging, dropping, and vibing.",
+        description: "Interactive portfolio site for developers. A place where people I've connected with can show off what they're building.",
         links: [
-          { label: "GitHub", url: "https://github.com/slavakost/vibefolio" },
           { label: "Live Site", url: "https://vibefolio.site" },
-        ],
-      },
-      {
-        id: "p2",
-        name: "Mood Canvas",
-        dateStarted: "Jan 2026",
-        description: "Real-time collaborative drawing app with emotion-based color palettes.",
-        links: [
-          { label: "GitHub", url: "https://github.com/slavakost/moodcanvas" },
         ],
       },
     ],
     pastProjects: [
       {
-        id: "p3",
-        name: "RetroWave FM",
-        dateStarted: "Aug 2025",
-        dateEnded: "Dec 2025",
-        description: "80s-inspired internet radio with WebGL visualizations and nostalgic UI.",
+        id: "p2",
+        name: "CasinoDubs",
+        dateStarted: "2024",
+        dateEnded: "2025",
+        description: "A free casino site where you play with credits — no real money, all the fun.",
         links: [
-          { label: "GitHub", url: "https://github.com/slavakost/retrowavefm" },
-          { label: "Listen", url: "https://retrowavefm.com" },
+          { label: "Live Site", url: "https://casinodubs.ca" },
+        ],
+      },
+      {
+        id: "p3",
+        name: "Pontune",
+        dateStarted: "2024",
+        dateEnded: "2025",
+        description: "A coding learning site where people can learn to code through interactive lessons and projects.",
+        links: [
+          { label: "Live Site", url: "https://pontune.site" },
         ],
       },
     ],
@@ -56,18 +55,7 @@ export const people: Person[] = [
       { label: "LinkedIn", url: "https://linkedin.com/in/danielfrank", icon: "linkedin" },
       { label: "Dribbble", url: "https://dribbble.com/danielfrank", icon: "dribbble" },
     ],
-    currentProjects: [
-      {
-        id: "p4",
-        name: "SketchKit",
-        dateStarted: "Dec 2025",
-        description: "Design system for developers who can't design. Component library with personality.",
-        links: [
-          { label: "GitHub", url: "https://github.com/danielfrank/sketchkit" },
-          { label: "Docs", url: "https://sketchkit.design" },
-        ],
-      },
-    ],
+    currentProjects: [],
     pastProjects: [
       {
         id: "p5",
@@ -92,27 +80,7 @@ export const people: Person[] = [
       { label: "LinkedIn", url: "https://linkedin.com/in/isaactoop", icon: "linkedin" },
       { label: "Blog", url: "https://isaactoop.dev", icon: "blog" },
     ],
-    currentProjects: [
-      {
-        id: "p6",
-        name: "EdgeCache",
-        dateStarted: "Jan 2026",
-        description: "Distributed caching layer that's ridiculously fast. Redis but make it fun.",
-        links: [
-          { label: "GitHub", url: "https://github.com/isaactoop/edgecache" },
-        ],
-      },
-      {
-        id: "p7",
-        name: "DevMetrics",
-        dateStarted: "Nov 2025",
-        description: "Analytics dashboard for engineering teams. Know your velocity without losing your mind.",
-        links: [
-          { label: "GitHub", url: "https://github.com/isaactoop/devmetrics" },
-          { label: "Demo", url: "https://devmetrics.app" },
-        ],
-      },
-    ],
+    currentProjects: [],
     pastProjects: [
       {
         id: "p8",
@@ -136,18 +104,7 @@ export const people: Person[] = [
       { label: "Twitter", url: "https://twitter.com/evanlazare", icon: "twitter" },
       { label: "Instagram", url: "https://instagram.com/evanlazare", icon: "instagram" },
     ],
-    currentProjects: [
-      {
-        id: "p9",
-        name: "Sonic Garden",
-        dateStarted: "Feb 2026",
-        description: "Interactive generative music experience that grows with your interactions.",
-        links: [
-          { label: "GitHub", url: "https://github.com/evanlazare/sonicgarden" },
-          { label: "Experience", url: "https://sonicgarden.art" },
-        ],
-      },
-    ],
+    currentProjects: [],
     pastProjects: [
       {
         id: "p10",
@@ -182,18 +139,7 @@ export const people: Person[] = [
       { label: "LinkedIn", url: "https://linkedin.com/in/armanamerian", icon: "linkedin" },
       { label: "Twitter", url: "https://twitter.com/armanamerian", icon: "twitter" },
     ],
-    currentProjects: [
-      {
-        id: "p12",
-        name: "QuickNotes",
-        dateStarted: "Jan 2026",
-        description: "Note-taking app that's actually fast. No bloat, just notes.",
-        links: [
-          { label: "GitHub", url: "https://github.com/armanamerian/quicknotes" },
-          { label: "Try It", url: "https://quicknotes.app" },
-        ],
-      },
-    ],
+    currentProjects: [],
     pastProjects: [
       {
         id: "p13",
