@@ -10,6 +10,7 @@ interface PortfolioWindowProps {
   zIndex: number;
   onFocus: () => void;
   initialRect?: DOMRect;
+  onOpenProject?: (url: string, title: string) => void;
 }
 
 function getInitials(name: string): string {
@@ -26,6 +27,7 @@ export default function PortfolioWindow({
   zIndex,
   onFocus,
   initialRect,
+  onOpenProject,
 }: PortfolioWindowProps) {
   const [activeTab, setActiveTab] = useState<"current" | "past">("current");
   const [profileExpanded, setProfileExpanded] = useState(false);
@@ -170,9 +172,62 @@ export default function PortfolioWindow({
         }}
         onMouseDown={handleMouseDownDrag}
       >
-        <div className="flex items-center gap-3">
+        {/* macOS traffic lights */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          {/* Red — close */}
+          <button
+            onClick={onClose}
+            className="group w-3.5 h-3.5 rounded-full flex items-center justify-center transition-opacity duration-150 cursor-pointer"
+            style={{ background: "#ff5f57" }}
+            title="Close"
+          >
+            <svg
+              className="opacity-0 group-hover:opacity-100 transition-opacity"
+              width="6"
+              height="6"
+              viewBox="0 0 10 10"
+              fill="none"
+            >
+              <path d="M1 1L9 9M9 1L1 9" stroke="#7a1410" strokeWidth="1.8" strokeLinecap="round" />
+            </svg>
+          </button>
+          {/* Yellow — no-op */}
+          <button
+            className="group w-3.5 h-3.5 rounded-full flex items-center justify-center cursor-default"
+            style={{ background: "#febc2e" }}
+            title="Minimize (not available)"
+          >
+            <svg
+              className="opacity-0 group-hover:opacity-100 transition-opacity"
+              width="6"
+              height="6"
+              viewBox="0 0 10 10"
+              fill="none"
+            >
+              <path d="M1.5 5h7" stroke="#7a5000" strokeWidth="1.8" strokeLinecap="round" />
+            </svg>
+          </button>
+          {/* Green — no-op */}
+          <button
+            className="group w-3.5 h-3.5 rounded-full flex items-center justify-center cursor-default"
+            style={{ background: "#28c840" }}
+            title="Full screen (not available)"
+          >
+            <svg
+              className="opacity-0 group-hover:opacity-100 transition-opacity"
+              width="6"
+              height="6"
+              viewBox="0 0 10 10"
+              fill="none"
+            >
+              <path d="M1 1h3.5M1 1v3.5M9 9H5.5M9 9V5.5" stroke="#0a4a0a" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="flex items-center gap-2 flex-1 min-w-0">
           <div
-            className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
+            className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
             style={{
               background: "#ffffff",
               border: "1.5px solid #8aa0b8",
@@ -182,31 +237,12 @@ export default function PortfolioWindow({
             {getInitials(person.name)}
           </div>
           <h3
-            className="font-semibold text-base truncate"
+            className="font-semibold text-sm truncate"
             style={{ color: "#2a4a6a" }}
           >
             {person.name}
           </h3>
         </div>
-        <button
-          onClick={onClose}
-          className="w-7 h-7 rounded-full flex items-center justify-center transition-colors duration-200 hover:bg-red-100 cursor-pointer shrink-0"
-          style={{ color: "#6b8dad" }}
-        >
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <line x1="18" y1="6" x2="6" y2="18" />
-            <line x1="6" y1="6" x2="18" y2="18" />
-          </svg>
-        </button>
       </div>
 
       {/* Profile toggle */}
@@ -379,6 +415,7 @@ export default function PortfolioWindow({
               key={project.id}
               project={project}
               isCurrent={activeTab === "current"}
+              onOpenProject={onOpenProject}
             />
           ))
         )}

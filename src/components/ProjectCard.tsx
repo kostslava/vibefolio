@@ -6,9 +6,10 @@ import { Project } from "@/lib/types";
 interface ProjectCardProps {
   project: Project;
   isCurrent: boolean;
+  onOpenProject?: (url: string, title: string) => void;
 }
 
-export default function ProjectCard({ project, isCurrent }: ProjectCardProps) {
+export default function ProjectCard({ project, isCurrent, onOpenProject }: ProjectCardProps) {
   const [expanded, setExpanded] = useState(false);
 
   return (
@@ -89,35 +90,67 @@ export default function ProjectCard({ project, isCurrent }: ProjectCardProps) {
           </p>
           <div className="flex flex-wrap gap-2">
             {project.links.map((link, i) => (
-              <a
-                key={i}
-                href={link.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 hover:scale-105"
-                style={{
-                  background: "#c8d8e8",
-                  color: "#2a4a6a",
-                  border: "1px solid #a0b4c8",
-                }}
-              >
-                <svg
-                  width="12"
-                  height="12"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
+              onOpenProject ? (
+                <button
+                  key={i}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onOpenProject(link.url, `${project.name} — ${link.label}`);
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 hover:scale-105 cursor-pointer"
+                  style={{
+                    background: "#c8d8e8",
+                    color: "#2a4a6a",
+                    border: "1px solid #a0b4c8",
+                  }}
                 >
-                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                  <polyline points="15 3 21 3 21 9" />
-                  <line x1="10" y1="14" x2="21" y2="3" />
-                </svg>
-                {link.label}
-              </a>
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                    <polyline points="15 3 21 3 21 9" />
+                    <line x1="10" y1="14" x2="21" y2="3" />
+                  </svg>
+                  {link.label}
+                </button>
+              ) : (
+                <a
+                  key={i}
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 hover:scale-105"
+                  style={{
+                    background: "#c8d8e8",
+                    color: "#2a4a6a",
+                    border: "1px solid #a0b4c8",
+                  }}
+                >
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                    <polyline points="15 3 21 3 21 9" />
+                    <line x1="10" y1="14" x2="21" y2="3" />
+                  </svg>
+                  {link.label}
+                </a>
+              )
             ))}
           </div>
         </div>
