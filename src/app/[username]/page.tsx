@@ -1,8 +1,7 @@
 "use client";
 
-import React, { useState, use } from "react";
+import React, { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
-import { people } from "@/lib/data";
 import { Person } from "@/lib/types";
 
 interface Particle {
@@ -182,12 +181,36 @@ function NotFound({ username }: { username: string }) {
   );
 }
 
+function Loading() {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: "#f0f0f0" }}>
+      <div className="w-8 h-8 rounded-full border-4 border-blue-300 border-t-blue-600 animate-spin" />
+    </div>
+  );
+}
+
 export default function UsernamePage({ params }: { params: Promise<{ username: string }> }) {
   const { username } = use(params);
-  const person = people.find(
-    (p) => p.username === username || p.id === username
-  );
+  // undefined = still loading, null = not found, Person = found
+  const [person, setPerson] = useState<Person | null | undefined>(undefined);
 
+  useEffect(() => {
+    fetch("/api/people", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((data) => {
+        if (Array.isArray(data)) {
+          const match = data.find(
+            (p: Person) => p.username === username || p.id === username
+          );
+          setPerson(match ?? null);
+        } else {
+          setPerson(null);
+        }
+      })
+      .catch(() => setPerson(null));
+  }, [username]);
+
+  if (person === undefined) return <Loading />;
   if (!person) return <NotFound username={username} />;
   return <UserIntro person={person} />;
 }

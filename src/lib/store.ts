@@ -1,7 +1,7 @@
 /**
  * Data store for people data.
- * Uses Vercel Blob in production (requires BLOB_READ_WRITE_TOKEN env var).
- * Falls back to hardcoded data.ts when Blob is not configured.
+ * Uses Vercel Blob exclusively (requires BLOB_READ_WRITE_TOKEN env var).
+ * No fallback to hardcoded data — blob is the single source of truth.
  *
  * To enable persistence on Vercel:
  *   1. Go to your Vercel project → Storage → Create Blob store → link it
@@ -9,26 +9,28 @@
  */
 
 import { Person } from "./types";
-import { people as defaultPeople } from "./data";
 
 const BLOB_FILENAME = "vibefolio-people.json";
 
 async function getBlobModule() {
-  // Dynamic import so the build doesn't fail if @vercel/blob isn't configured
   return await import("@vercel/blob");
 }
 
 export async function getPeople(): Promise<Person[]> {
   if (!process.env.BLOB_READ_WRITE_TOKEN) {
-    return defaultPeople;
+    return [];
   }
   try {
     const { list } = await getBlobModule();
     const { blobs } = await list({ prefix: BLOB_FILENAME });
     if (blobs.length > 0) {
+      // Include auth header so any legacy private blobs still work;
+      // public blobs (all new saves) simply ignore it.
       const res = await fetch(blobs[0].url, {
         cache: "no-store",
-        headers: { Authorization: `Bearer ${process.env.BLOB_READ_WRITE_TOKEN}` },
+        headers: process.env.BLOB_READ_WRITE_TOKEN
+          ? { Authorization: `Bearer ${process.env.BLOB_READ_WRITE_TOKEN}` }
+          : {},
       });
       if (res.ok) {
         const data = await res.json();
@@ -36,9 +38,9 @@ export async function getPeople(): Promise<Person[]> {
       }
     }
   } catch {
-    // fall through
+    // Return empty rather than falling back to stale hardcoded data
   }
-  return defaultPeople;
+  return [];
 }
 
 export async function savePeople(people: Person[]): Promise<void> {
@@ -48,17 +50,17 @@ export async function savePeople(people: Person[]): Promise<void> {
     );
   }
   const { put, list, del } = await getBlobModule();
-  // Remove existing blobs at this path
+  // Delete any existing blobs at this path before writing
   try {
     const { blobs } = await list({ prefix: BLOB_FILENAME });
     for (const blob of blobs) {
       await del(blob.url);
     }
   } catch {
-    // ignore deletion errors
+    // Ignore deletion errors — put will still succeed
   }
   await put(BLOB_FILENAME, JSON.stringify(people, null, 2), {
-    access: "private",
+    access: "public",          // Public so the URL is directly fetchable server-side
     contentType: "application/json",
     addRandomSuffix: false,
   });

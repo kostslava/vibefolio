@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { Person, Project } from "@/lib/types";
+import { people as seedPeople } from "@/lib/data";
 
 /* ─── helpers ──────────────────────────────────────────────────────────── */
 
@@ -210,6 +211,20 @@ function PersonEditor({
         <Field label="Full Name" value={person.name} onChange={(v) => set("name", v)} />
         <Field label="Photo URL" value={person.photo} onChange={(v) => set("photo", v)} placeholder="https://…" />
       </div>
+      <div className="grid grid-cols-2 gap-3">
+        <Field
+          label="Username (URL slug)"
+          value={person.username ?? ""}
+          onChange={(v) => set("username", v || undefined)}
+          placeholder="e.g. daniel-frank"
+        />
+        <Field
+          label="Intro Tagline"
+          value={person.introTagline ?? ""}
+          onChange={(v) => set("introTagline", v || undefined)}
+          placeholder="One-liner shown on their landing page"
+        />
+      </div>
       <Field label="Bio" value={person.bio} onChange={(v) => set("bio", v)} multiline />
 
       {/* Socials */}
@@ -324,7 +339,16 @@ export default function AdminPage() {
       return;
     }
     const data = await res.json();
-    setPeople(data);
+    // Auto-fill any missing username / introTagline from seed data (matched by id)
+    const merged: Person[] = (Array.isArray(data) ? data : []).map((p: Person) => {
+      const seed = seedPeople.find((s) => s.id === p.id);
+      return {
+        ...p,
+        username: p.username ?? seed?.username,
+        introTagline: p.introTagline ?? seed?.introTagline,
+      };
+    });
+    setPeople(merged);
     setPassword(pw);
     setAuthed(true);
     setSelectedIdx(0);
