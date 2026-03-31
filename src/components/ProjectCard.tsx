@@ -74,17 +74,17 @@ export default function ProjectCard({ project, isCurrent, onOpenProject }: Proje
       <div
         className="overflow-hidden transition-all duration-300 ease-in-out"
         style={{
-          maxHeight: expanded ? "320px" : "0px",
+          maxHeight: expanded ? "500px" : "0px",
           opacity: expanded ? 1 : 0,
         }}
       >
         <div
           className="overflow-y-auto"
-          style={{ maxHeight: "320px" }}
+          style={{ maxHeight: "500px" }}
           onClick={(e) => e.stopPropagation()}
         >
         <div
-          className="px-5 pb-4 pt-0"
+          className="px-5 pb-6 pt-0"
           style={{ borderTop: "1px solid #c8d8e8" }}
         >
           <p
@@ -93,7 +93,7 @@ export default function ProjectCard({ project, isCurrent, onOpenProject }: Proje
           >
             {project.description}
           </p>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 mb-6">
             {project.links.map((link, i) => (
               onOpenProject ? (
                 <button
