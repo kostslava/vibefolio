@@ -2,9 +2,9 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { Person } from "@/lib/types";
-import { people } from "@/lib/data";
 
 interface SearchLauncherProps {
+  people: Person[];
   onOpenPortfolio: (person: Person) => void;
 }
 
@@ -18,7 +18,7 @@ function getInitials(name: string): string {
 
 const LAUNCHER_WIDTH = 340;
 
-export default function SearchLauncher({ onOpenPortfolio }: SearchLauncherProps) {
+export default function SearchLauncher({ people, onOpenPortfolio }: SearchLauncherProps) {
   const [phase, setPhase] = useState<"idle" | "searching" | "selected">("idle");
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<Person | null>(null);
