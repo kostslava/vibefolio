@@ -224,8 +224,7 @@ export default function AIChat({ person }: AIChatProps) {
                 <span style={{ fontSize: 14 }}>{btn.icon}</span>
               </button>
               {/* Tooltip */}
-              {phase !== "loading" && (
-                <div
+              <div
                   className="absolute bottom-full left-1/2 mb-1.5 px-2 py-1 rounded-md text-[10px] font-medium whitespace-nowrap pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-50"
                   style={{
                     transform: "translateX(-50%)",
@@ -246,7 +245,6 @@ export default function AIChat({ person }: AIChatProps) {
                     }}
                   />
                 </div>
-              )}
             </div>
           ))}
           {phase === "playing" && (
