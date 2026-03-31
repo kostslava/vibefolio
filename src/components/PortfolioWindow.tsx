@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useCallback, useEffect } from "react";
-import { Person } from "@/lib/types";
+import { Person, Project } from "@/lib/types";
 import ProjectCard from "@/components/ProjectCard";
 import AIChat from "@/components/AIChat";
 
@@ -12,6 +12,59 @@ interface PortfolioWindowProps {
   onFocus: () => void;
   initialRect?: DOMRect;
   onOpenProject?: (url: string, title: string) => void;
+  isAdmin?: boolean;
+  onSavePerson?: (updated: Person) => Promise<void>;
+}
+
+/* ── Inline editor helpers ──────────────────────────────────────────────── */
+
+function uid() { return Math.random().toString(36).slice(2); }
+
+function EdField({ label, value, onChange, multiline = false, placeholder = "" }: {
+  label: string; value: string; onChange: (v: string) => void; multiline?: boolean; placeholder?: string;
+}) {
+  const cls = "w-full rounded-lg px-3 py-1.5 text-xs outline-none focus:ring-1 focus:ring-blue-400";
+  const style: React.CSSProperties = { background: "#eef4fa", border: "1px solid #b4c8dc", color: "#1a3a5a" };
+  return (
+    <div className="flex flex-col gap-0.5">
+      <label className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "#5a7a9a" }}>{label}</label>
+      {multiline
+        ? <textarea className={cls} style={{ ...style, minHeight: 56, resize: "vertical" }} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} />
+        : <input className={cls} style={style} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} />
+      }
+    </div>
+  );
+}
+
+function EdSection({ children }: { children: React.ReactNode }) {
+  return <h4 className="text-[10px] font-bold uppercase tracking-wider pt-3 pb-1" style={{ color: "#4a6a8a", borderBottom: "1px solid #c0d4e8" }}>{children}</h4>;
+}
+
+function ProjectEditorRow({ project, onChange, onRemove, isCurrent }: {
+  project: Project; onChange: (p: Project) => void; onRemove: () => void; isCurrent: boolean;
+}) {
+  const set = (k: keyof Project, v: unknown) => onChange({ ...project, [k]: v });
+  return (
+    <div className="flex flex-col gap-1.5 p-2 rounded-lg mb-1.5" style={{ background: "#e4edf5", border: "1px solid #b4c8dc" }}>
+      <div className="flex gap-1.5">
+        <div className="flex-1"><EdField label="Name" value={project.name} onChange={(v) => set("name", v)} /></div>
+        <div style={{ width: 90 }}><EdField label="Started" value={project.dateStarted} onChange={(v) => set("dateStarted", v)} placeholder="e.g. Jan 2025" /></div>
+        {!isCurrent && <div style={{ width: 80 }}><EdField label="Ended" value={project.dateEnded ?? ""} onChange={(v) => set("dateEnded", v)} /></div>}
+        <button onClick={onRemove} className="self-end text-[10px] px-1.5 py-1 rounded" style={{ background: "#fce8e8", color: "#b02020", border: "1px solid #eababa", whiteSpace: "nowrap" }}>✕</button>
+      </div>
+      <EdField label="Description" value={project.description} onChange={(v) => set("description", v)} multiline />
+      {project.links.map((link, i) => (
+        <div key={i} className="flex gap-1">
+          <input className="rounded px-2 py-1 text-[10px] w-20 outline-none" style={{ background: "#eef4fa", border: "1px solid #b4c8dc", color: "#1a3a5a" }} placeholder="Label" value={link.label}
+            onChange={(e) => { const ls = [...project.links]; ls[i] = { ...ls[i], label: e.target.value }; set("links", ls); }} />
+          <input className="rounded px-2 py-1 text-[10px] flex-1 outline-none" style={{ background: "#eef4fa", border: "1px solid #b4c8dc", color: "#1a3a5a" }} placeholder="https://…" value={link.url}
+            onChange={(e) => { const ls = [...project.links]; ls[i] = { ...ls[i], url: e.target.value }; set("links", ls); }} />
+          <button onClick={() => set("links", project.links.filter((_, j) => j !== i))} className="text-[10px] px-1.5 py-1 rounded" style={{ background: "#fce8e8", color: "#b02020", border: "1px solid #eababa" }}>✕</button>
+        </div>
+      ))}
+      <button onClick={() => set("links", [...project.links, { label: "", url: "" }])} className="self-start text-[10px] px-2 py-0.5 rounded" style={{ background: "#e4f0fa", color: "#2a6aaa", border: "1px solid #a4c4e0" }}>+ link</button>
+    </div>
+  );
 }
 
 function getInitials(name: string): string {
@@ -33,12 +86,20 @@ export default function PortfolioWindow({
   onFocus,
   initialRect,
   onOpenProject,
+  isAdmin = false,
+  onSavePerson,
 }: PortfolioWindowProps) {
   const [activeTab, setActiveTab] = useState<"current" | "past">("current");
   const [profileExpanded, setProfileExpanded] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const [isAnimating, setIsAnimating] = useState(!!initialRect);
+
+  // Edit mode
+  const [editMode, setEditMode] = useState(false);
+  const [editDraft, setEditDraft] = useState<Person>(person);
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [saveMsg, setSaveMsg] = useState("");
 
   // Initialize position - either from card position or centered
   const [position, setPosition] = useState(() => {
@@ -147,6 +208,21 @@ export default function PortfolioWindow({
   const projects =
     activeTab === "current" ? person.currentProjects : person.pastProjects;
 
+  const handleSave = async () => {
+    if (!onSavePerson) return;
+    setSaveState("saving");
+    setSaveMsg("");
+    try {
+      await onSavePerson(editDraft);
+      setSaveState("saved");
+      setSaveMsg("Saved!");
+      setTimeout(() => { setSaveState("idle"); setSaveMsg(""); setEditMode(false); }, 1200);
+    } catch (err: unknown) {
+      setSaveState("error");
+      setSaveMsg(err instanceof Error ? err.message : "Save failed");
+    }
+  };
+
   return (
     <div
       ref={windowRef}
@@ -251,7 +327,86 @@ export default function PortfolioWindow({
             </h3>
           </div>
         </div>
+
+        {/* Admin edit button (right side) */}
+        {isAdmin && (
+          <div className="ml-auto z-10">
+            <button
+              onClick={() => { setEditDraft(person); setEditMode(true); setSaveState("idle"); setSaveMsg(""); }}
+              className="flex items-center gap-1 text-[11px] px-2 py-1 rounded-lg transition-colors"
+              style={{ background: editMode ? "#3a7ab8" : "#dceaf5", color: editMode ? "#fff" : "#3a7ab8", border: "1px solid #8ab0cc" }}
+              title="Edit profile"
+            >
+              ✏ Edit
+            </button>
+          </div>
+        )}
       </div>
+
+      {/* Edit overlay */}
+      {editMode && (
+        <div className="absolute inset-0 flex flex-col overflow-hidden rounded-2xl" style={{ zIndex: 20, background: "#dce6f0" }}>
+          {/* Edit header bar */}
+          <div className="flex items-center justify-between px-4 py-2.5 shrink-0" style={{ background: "#c0d0e0", borderBottom: "1.5px solid #a0b4c8" }}>
+            <span className="text-sm font-semibold" style={{ color: "#1a3a5a" }}>Editing profile</span>
+            <div className="flex items-center gap-2">
+              {saveMsg && <span className="text-xs" style={{ color: saveState === "error" ? "#b02020" : "#1a7a3a" }}>{saveMsg}</span>}
+              <button onClick={() => setEditMode(false)} className="text-xs px-2.5 py-1 rounded-lg" style={{ background: "#e4edf5", color: "#4a6a8a", border: "1px solid #b4c8dc" }}>Cancel</button>
+              <button
+                onClick={handleSave}
+                disabled={saveState === "saving"}
+                className="text-xs px-3 py-1 rounded-lg font-semibold"
+                style={{ background: saveState === "saving" ? "#a0b8cc" : "#3a7ab8", color: "#fff" }}
+              >
+                {saveState === "saving" ? "Saving…" : "Save"}
+              </button>
+            </div>
+          </div>
+
+          {/* Scrollable form */}
+          <div className="flex-1 overflow-y-auto px-4 py-3 flex flex-col gap-2.5">
+            {/* Basic info */}
+            <div className="grid grid-cols-2 gap-2">
+              <EdField label="Name" value={editDraft.name} onChange={(v) => setEditDraft((d) => ({ ...d, name: v }))} />
+              <EdField label="Photo URL" value={editDraft.photo} onChange={(v) => setEditDraft((d) => ({ ...d, photo: v }))} placeholder="https://…" />
+            </div>
+            <EdField label="Bio" value={editDraft.bio} onChange={(v) => setEditDraft((d) => ({ ...d, bio: v }))} multiline />
+
+            {/* Socials */}
+            <EdSection>Socials</EdSection>
+            {editDraft.socials.map((s, i) => (
+              <div key={i} className="flex gap-1 items-center">
+                <input className="rounded px-2 py-1 text-[10px] w-20 outline-none" style={{ background: "#eef4fa", border: "1px solid #b4c8dc", color: "#1a3a5a" }} placeholder="Label" value={s.label}
+                  onChange={(e) => { const arr = [...editDraft.socials]; arr[i] = { ...arr[i], label: e.target.value }; setEditDraft((d) => ({ ...d, socials: arr })); }} />
+                <input className="rounded px-2 py-1 text-[10px] flex-1 outline-none" style={{ background: "#eef4fa", border: "1px solid #b4c8dc", color: "#1a3a5a" }} placeholder="https://…" value={s.url}
+                  onChange={(e) => { const arr = [...editDraft.socials]; arr[i] = { ...arr[i], url: e.target.value }; setEditDraft((d) => ({ ...d, socials: arr })); }} />
+                <input className="rounded px-2 py-1 text-[10px] w-16 outline-none" style={{ background: "#eef4fa", border: "1px solid #b4c8dc", color: "#1a3a5a" }} placeholder="icon" value={s.icon}
+                  onChange={(e) => { const arr = [...editDraft.socials]; arr[i] = { ...arr[i], icon: e.target.value }; setEditDraft((d) => ({ ...d, socials: arr })); }} />
+                <button onClick={() => setEditDraft((d) => ({ ...d, socials: d.socials.filter((_, j) => j !== i) }))} className="text-[10px] px-1.5 py-1 rounded" style={{ background: "#fce8e8", color: "#b02020", border: "1px solid #eababa" }}>✕</button>
+              </div>
+            ))}
+            <button onClick={() => setEditDraft((d) => ({ ...d, socials: [...d.socials, { label: "", url: "", icon: "" }] }))} className="self-start text-[10px] px-2 py-0.5 rounded" style={{ background: "#e4f0fa", color: "#2a6aaa", border: "1px solid #a4c4e0" }}>+ social</button>
+
+            {/* Current projects */}
+            <EdSection>Current Projects</EdSection>
+            {editDraft.currentProjects.map((p, i) => (
+              <ProjectEditorRow key={p.id} project={p} isCurrent
+                onChange={(updated) => { const arr = [...editDraft.currentProjects]; arr[i] = updated; setEditDraft((d) => ({ ...d, currentProjects: arr })); }}
+                onRemove={() => setEditDraft((d) => ({ ...d, currentProjects: d.currentProjects.filter((_, j) => j !== i) }))} />
+            ))}
+            <button onClick={() => setEditDraft((d) => ({ ...d, currentProjects: [...d.currentProjects, { id: uid(), name: "", dateStarted: "", description: "", links: [] }] }))} className="self-start text-[10px] px-2 py-0.5 rounded" style={{ background: "#e4f0fa", color: "#2a6aaa", border: "1px solid #a4c4e0" }}>+ project</button>
+
+            {/* Past projects */}
+            <EdSection>Past Projects</EdSection>
+            {editDraft.pastProjects.map((p, i) => (
+              <ProjectEditorRow key={p.id} project={p} isCurrent={false}
+                onChange={(updated) => { const arr = [...editDraft.pastProjects]; arr[i] = updated; setEditDraft((d) => ({ ...d, pastProjects: arr })); }}
+                onRemove={() => setEditDraft((d) => ({ ...d, pastProjects: d.pastProjects.filter((_, j) => j !== i) }))} />
+            ))}
+            <button onClick={() => setEditDraft((d) => ({ ...d, pastProjects: [...d.pastProjects, { id: uid(), name: "", dateStarted: "", dateEnded: "", description: "", links: [] }] }))} className="self-start text-[10px] px-2 py-0.5 rounded" style={{ background: "#e4f0fa", color: "#2a6aaa", border: "1px solid #a4c4e0" }}>+ project</button>
+          </div>
+        </div>
+      )}
 
       {/* Profile toggle */}
       <button

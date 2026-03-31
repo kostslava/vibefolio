@@ -5,15 +5,17 @@ import React from "react";
 interface HeaderProps {
   activeTab: "projects" | "about";
   onTabChange: (tab: "projects" | "about") => void;
-  searchQuery?: string;
-  onSearchChange?: (query: string) => void;
+  isAdmin?: boolean;
+  onAdminClick?: () => void;
+  onAdminLogout?: () => void;
 }
 
 export default function Header({
   activeTab,
   onTabChange,
-  searchQuery = "",
-  onSearchChange,
+  isAdmin = false,
+  onAdminClick,
+  onAdminLogout,
 }: HeaderProps) {
   return (
     <header
@@ -54,36 +56,29 @@ export default function Header({
         {/* Spacer */}
         <div className="flex-1" />
 
-        {/* Search */}
-        {activeTab === "projects" && onSearchChange && (
-          <div className="relative" style={{ width: "240px" }}>
-            <input
-              type="text"
-              placeholder="Search people..."
-              value={searchQuery}
-              onChange={(e) => onSearchChange(e.target.value)}
-              className="w-full px-4 py-2 pr-10 rounded-lg text-sm outline-none transition-all duration-200"
-              style={{
-                background: "#ffffff",
-                border: "1.5px solid #a0b4c8",
-                color: "#2a4a6a",
-              }}
-            />
-            <svg
-              className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="#6b8dad"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+        {/* Admin */}
+        {isAdmin ? (
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-medium px-2 py-1 rounded" style={{ background: "#3a7ab8", color: "#fff" }}>
+              Admin
+            </span>
+            <button
+              onClick={onAdminLogout}
+              className="text-xs transition-opacity hover:opacity-70"
+              style={{ color: "#6b8dad" }}
             >
-              <circle cx="11" cy="11" r="8" />
-              <path d="m21 21-4.35-4.35" />
-            </svg>
+              log out
+            </button>
           </div>
+        ) : (
+          <button
+            onClick={onAdminClick}
+            className="text-xs transition-opacity hover:opacity-50"
+            style={{ color: "#b0c4d4" }}
+            title="Admin login"
+          >
+            admin
+          </button>
         )}
       </div>
     </header>
