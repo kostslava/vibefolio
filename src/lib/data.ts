@@ -54,9 +54,9 @@ export const people: Person[] = [
     photo: "",
     bio: "Design thinker & code poet. I build interfaces that people actually want to use.",
     socials: [
-      { label: "GitHub", url: "https://github.com/danielfrank", icon: "github" },
-      { label: "LinkedIn", url: "https://linkedin.com/in/danielfrank", icon: "linkedin" },
-      { label: "Dribbble", url: "https://dribbble.com/danielfrank", icon: "dribbble" },
+      { label: "GitHub", url: "https://github.com/danielfrankin85-blip", icon: "github" },
+      { label: "LinkedIn", url: "https://www.linkedin.com/in/daniel-frank-5b22a5384", icon: "linkedin" },
+      { label: "Niggler", url: "https://dribbble.com/danielfrank", icon: "dribbble" },
     ],
     currentProjects: [
 
