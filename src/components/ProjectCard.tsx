@@ -20,6 +20,16 @@ export default function ProjectCard({ project, isCurrent, onOpenProject }: Proje
         border: "1.5px solid #b8c8d8",
       }}
       onClick={() => setExpanded(!expanded)}
+      role="button"
+      tabIndex={0}
+      aria-expanded={expanded}
+      aria-label={`${expanded ? "Collapse" : "Expand"} ${project.name}`}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          setExpanded((prev) => !prev);
+        }
+      }}
     >
       {/* Project header */}
       <div className="px-5 py-4 flex items-center justify-between">
@@ -102,7 +112,7 @@ export default function ProjectCard({ project, isCurrent, onOpenProject }: Proje
                     e.stopPropagation();
                     onOpenProject(link.url, `${project.name} — ${link.label}`);
                   }}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 hover:scale-105 cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-3 py-2 min-h-10 rounded-lg text-xs font-medium transition-all duration-200 hover:scale-105 cursor-pointer"
                   style={{
                     background: "#c8d8e8",
                     color: "#2a4a6a",
@@ -132,7 +142,7 @@ export default function ProjectCard({ project, isCurrent, onOpenProject }: Proje
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={(e) => e.stopPropagation()}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 hover:scale-105"
+                  className="inline-flex items-center gap-1.5 px-3 py-2 min-h-10 rounded-lg text-xs font-medium transition-all duration-200 hover:scale-105"
                   style={{
                     background: "#c8d8e8",
                     color: "#2a4a6a",

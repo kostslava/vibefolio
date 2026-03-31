@@ -28,6 +28,11 @@ const redCursor = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/
 const yellowCursor = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16'%3E%3Ccircle cx='6' cy='6' r='5' fill='%23febc2e' stroke='%23a07800' stroke-width='1.2'/%3E%3C/svg%3E") 6 6, pointer`;
 const greenCursor = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16'%3E%3Ccircle cx='6' cy='6' r='5' fill='%2328c840' stroke='%23107a22' stroke-width='1.2'/%3E%3C/svg%3E") 6 6, pointer`;
 
+const MOBILE_BREAKPOINT = 768;
+const MOBILE_GUTTER = 0;
+const MOBILE_TOP = 64;
+const MOBILE_BOTTOM_OFFSET = 0;
+
 export default function PortfolioWindow({
   person,
   onClose,
@@ -44,6 +49,10 @@ export default function PortfolioWindow({
   const [isResizing, setIsResizing] = useState(false);
   const [isAnimating, setIsAnimating] = useState(!!initialRect);
   const [isMaximized, setIsMaximized] = useState(false);
+  const [viewport, setViewport] = useState(() => {
+    if (typeof window === "undefined") return { width: 1200, height: 900 };
+    return { width: window.innerWidth, height: window.innerHeight };
+  });
   const prevRectRef = useRef<{ x: number; y: number; width: number; height: number } | null>(null);
 
   // Window animation state
@@ -78,6 +87,9 @@ export default function PortfolioWindow({
     }
     const vw = window.innerWidth;
     const vh = window.innerHeight;
+    if (vw <= MOBILE_BREAKPOINT) {
+      return { x: MOBILE_GUTTER, y: MOBILE_TOP };
+    }
     const initialX = Math.max(20, (vw - 480) / 2 + (Math.random() - 0.5) * 80);
     const initialY = Math.max(20, (vh - 520) / 2 + (Math.random() - 0.5) * 60);
     return { x: initialX, y: initialY };
@@ -87,8 +99,24 @@ export default function PortfolioWindow({
     if (initialRect) {
       return { width: initialRect.width, height: initialRect.height };
     }
+    if (typeof window !== "undefined" && window.innerWidth <= MOBILE_BREAKPOINT) {
+      return {
+        width: Math.max(280, window.innerWidth - MOBILE_GUTTER * 2),
+        height: Math.max(360, window.innerHeight - MOBILE_BOTTOM_OFFSET),
+      };
+    }
     return { width: 480, height: 520 };
   });
+
+  const isMobile = viewport.width <= MOBILE_BREAKPOINT;
+  const mobileFrame = {
+    x: MOBILE_GUTTER,
+    y: MOBILE_TOP,
+    width: viewport.width,
+    height: Math.max(320, viewport.height - MOBILE_TOP - MOBILE_BOTTOM_OFFSET),
+  };
+  const effectivePosition = isMobile && !isMaximized ? { x: mobileFrame.x, y: mobileFrame.y } : position;
+  const effectiveSize = isMobile && !isMaximized ? { width: mobileFrame.width, height: mobileFrame.height } : size;
 
   // Animate from card to window
   useEffect(() => {
@@ -97,16 +125,41 @@ export default function PortfolioWindow({
     const timer = setTimeout(() => {
       const vw = window.innerWidth;
       const vh = window.innerHeight;
-      const targetX = Math.max(20, (vw - 480) / 2);
-      const targetY = Math.max(20, (vh - 520) / 2);
-      
-      setPosition({ x: targetX, y: targetY });
-      setSize({ width: 480, height: 520 });
+      if (vw <= MOBILE_BREAKPOINT) {
+        setPosition({ x: MOBILE_GUTTER, y: MOBILE_TOP });
+        setSize({
+          width: vw,
+          height: Math.max(320, vh - MOBILE_TOP - MOBILE_BOTTOM_OFFSET),
+        });
+      } else {
+        const targetX = Math.max(20, (vw - 480) / 2);
+        const targetY = Math.max(20, (vh - 520) / 2);
+        setPosition({ x: targetX, y: targetY });
+        setSize({ width: 480, height: 520 });
+      }
       setIsAnimating(false);
     }, 50);
     
     return () => clearTimeout(timer);
   }, [initialRect, isAnimating]);
+
+  useEffect(() => {
+    const updateViewport = () => {
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      setViewport({ width, height });
+      if (width <= MOBILE_BREAKPOINT && !isMaximized) {
+        setPosition({ x: MOBILE_GUTTER, y: MOBILE_TOP });
+        setSize({
+          width,
+          height: Math.max(320, height - MOBILE_TOP - MOBILE_BOTTOM_OFFSET),
+        });
+      }
+    };
+    updateViewport();
+    window.addEventListener("resize", updateViewport);
+    return () => window.removeEventListener("resize", updateViewport);
+  }, [isMaximized]);
 
   const windowRef = useRef<HTMLDivElement>(null);
   const dragOffset = useRef({ x: 0, y: 0 });
@@ -114,6 +167,7 @@ export default function PortfolioWindow({
   // Drag handlers
   const handleMouseDownDrag = useCallback(
     (e: React.MouseEvent) => {
+      if (isMobile || isMaximized) return;
       if ((e.target as HTMLElement).closest("button")) return;
       onFocus();
       setIsDragging(true);
@@ -122,12 +176,13 @@ export default function PortfolioWindow({
         y: e.clientY - position.y,
       };
     },
-    [position, onFocus]
+    [position, onFocus, isMobile, isMaximized]
   );
 
   // Resize handlers
   const handleMouseDownResize = useCallback(
     (e: React.MouseEvent) => {
+      if (isMobile || isMaximized) return;
       e.preventDefault();
       e.stopPropagation();
       onFocus();
@@ -137,7 +192,7 @@ export default function PortfolioWindow({
         y: e.clientY,
       };
     },
-    [onFocus]
+    [onFocus, isMobile, isMaximized]
   );
 
   useEffect(() => {
@@ -145,17 +200,21 @@ export default function PortfolioWindow({
 
     const handleMouseMove = (e: MouseEvent) => {
       if (isDragging) {
+        const nextX = e.clientX - dragOffset.current.x;
+        const nextY = e.clientY - dragOffset.current.y;
+        const maxX = Math.max(0, viewport.width - size.width);
+        const maxY = Math.max(0, viewport.height - size.height);
         setPosition({
-          x: e.clientX - dragOffset.current.x,
-          y: e.clientY - dragOffset.current.y,
+          x: Math.min(Math.max(0, nextX), maxX),
+          y: Math.min(Math.max(0, nextY), maxY),
         });
       }
       if (isResizing) {
         const dx = e.clientX - dragOffset.current.x;
         const dy = e.clientY - dragOffset.current.y;
         setSize((prev) => ({
-          width: Math.max(360, prev.width + dx),
-          height: Math.max(300, prev.height + dy),
+          width: Math.min(Math.max(360, prev.width + dx), viewport.width),
+          height: Math.min(Math.max(300, prev.height + dy), viewport.height),
         }));
         dragOffset.current = { x: e.clientX, y: e.clientY };
       }
@@ -172,7 +231,7 @@ export default function PortfolioWindow({
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
     };
-  }, [isDragging, isResizing]);
+  }, [isDragging, isResizing, viewport, size.width, size.height]);
 
   const projects =
     activeTab === "current" ? person.currentProjects : person.pastProjects;
@@ -187,18 +246,18 @@ export default function PortfolioWindow({
       setIsMaximized(false);
     } else {
       // Save current, then maximize
-      prevRectRef.current = { x: position.x, y: position.y, width: size.width, height: size.height };
+      prevRectRef.current = { x: effectivePosition.x, y: effectivePosition.y, width: effectiveSize.width, height: effectiveSize.height };
       setPosition({ x: 0, y: 0 });
       setSize({ width: window.innerWidth, height: window.innerHeight });
       setIsMaximized(true);
     }
-  }, [isMaximized, position, size]);
+  }, [isMaximized, effectivePosition.x, effectivePosition.y, effectiveSize.width, effectiveSize.height]);
 
   const computeDockTranslate = () => {
     if (typeof window === "undefined") return { x: 0, y: 0 };
     const dockCX = window.innerWidth / 2;
     const dockCY = window.innerHeight - 48;
-    return { x: dockCX - (position.x + size.width / 2), y: dockCY - (position.y + size.height / 2) };
+    return { x: dockCX - (effectivePosition.x + effectiveSize.width / 2), y: dockCY - (effectivePosition.y + effectiveSize.height / 2) };
   };
 
   const handleCloseClick = () => {
@@ -242,15 +301,15 @@ export default function PortfolioWindow({
   return (
     <div
       ref={windowRef}
-      className="fixed rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+      className={`fixed shadow-2xl flex flex-col overflow-hidden ${isMobile && !isMaximized ? "rounded-none" : "rounded-2xl"}`}
       style={{
-        left: position.x,
-        top: position.y,
-        width: size.width,
-        height: size.height,
+        left: effectivePosition.x,
+        top: effectivePosition.y,
+        width: effectiveSize.width,
+        height: effectiveSize.height,
         zIndex,
         background: "#dce6f0",
-        border: "2px solid #8aa0b8",
+        border: isMobile && !isMaximized ? "none" : "2px solid #8aa0b8",
         userSelect: isDragging || isResizing ? "none" : "auto",
         visibility: (minimized && animState === "idle") ? "hidden" : "visible",
         pointerEvents: (minimized && animState === "idle") ? "none" : "auto",
@@ -262,14 +321,15 @@ export default function PortfolioWindow({
               : isDragging || isResizing
                 ? "none"
                 : "box-shadow 0.2s",
-        borderRadius: isMaximized ? 0 : undefined,
+              borderRadius: isMaximized || (isMobile && !isMaximized) ? 0 : undefined,
+              boxShadow: isMobile && !isMaximized ? "none" : undefined,
         ...getAnimStyle(),
       }}
       onMouseDown={onFocus}
     >
       {/* Title bar - draggable */}
       <div
-        className="flex items-center px-5 py-3 cursor-move shrink-0 relative"
+        className={`flex items-center px-4 sm:px-5 py-3 shrink-0 relative ${isMobile || isMaximized ? "cursor-default" : "cursor-move"}`}
         style={{
           background: "#c0d0e0",
           borderBottom: "1.5px solid #a0b4c8",
@@ -277,13 +337,14 @@ export default function PortfolioWindow({
         onMouseDown={handleMouseDownDrag}
       >
         {/* macOS traffic lights */}
-        <div className="flex items-center gap-1.5 shrink-0 z-10">
+        <div className="flex items-center gap-2 shrink-0 z-10">
           {/* Red — close */}
           <button
             onClick={handleCloseClick}
-            className="group w-3.5 h-3.5 rounded-full flex items-center justify-center transition-opacity duration-150"
+            className={`group rounded-full flex items-center justify-center transition-opacity duration-150 ${isMobile ? "w-6 h-6" : "w-3.5 h-3.5"}`}
             style={{ background: "#ff5f57", cursor: redCursor }}
             title="Close"
+            aria-label={`Close ${person.name} portfolio`}
           >
             <svg
               className="opacity-0 group-hover:opacity-100 transition-opacity"
@@ -296,42 +357,48 @@ export default function PortfolioWindow({
             </svg>
           </button>
           {/* Yellow — minimize */}
-          <button
-            onClick={handleMinimizeClick}
-            className="group w-3.5 h-3.5 rounded-full flex items-center justify-center"
-            style={{ background: "#febc2e", cursor: yellowCursor }}
-            title="Minimize"
-          >
-            <svg
-              className="opacity-0 group-hover:opacity-100 transition-opacity"
-              width="6"
-              height="6"
-              viewBox="0 0 10 10"
-              fill="none"
+          {!isMobile && (
+            <button
+              onClick={handleMinimizeClick}
+              className="group w-3.5 h-3.5 rounded-full flex items-center justify-center"
+              style={{ background: "#febc2e", cursor: yellowCursor }}
+              title="Minimize"
+              aria-label={`Minimize ${person.name} portfolio`}
             >
-              <path d="M1.5 5h7" stroke="#7a5000" strokeWidth="1.8" strokeLinecap="round" />
-            </svg>
-          </button>
+              <svg
+                className="opacity-0 group-hover:opacity-100 transition-opacity"
+                width="6"
+                height="6"
+                viewBox="0 0 10 10"
+                fill="none"
+              >
+                <path d="M1.5 5h7" stroke="#7a5000" strokeWidth="1.8" strokeLinecap="round" />
+              </svg>
+            </button>
+          )}
           {/* Green — maximize / restore */}
-          <button
-            onClick={handleToggleMaximize}
-            className="group w-3.5 h-3.5 rounded-full flex items-center justify-center"
-            style={{ background: "#28c840", cursor: greenCursor }}
-            title={isMaximized ? "Restore" : "Maximise"}
-          >
-            <svg
-              className="opacity-0 group-hover:opacity-100 transition-opacity"
-              width="6"
-              height="6"
-              viewBox="0 0 10 10"
-              fill="none"
+          {!isMobile && (
+            <button
+              onClick={handleToggleMaximize}
+              className="group w-3.5 h-3.5 rounded-full flex items-center justify-center"
+              style={{ background: "#28c840", cursor: greenCursor }}
+              title={isMaximized ? "Restore" : "Maximise"}
+              aria-label={isMaximized ? `Restore ${person.name} portfolio` : `Maximize ${person.name} portfolio`}
             >
-              {isMaximized
-                ? <path d="M3 1L9 1M9 1V7M1 9L7 3" stroke="#0a4a0a" strokeWidth="1.5" strokeLinecap="round" />
-                : <path d="M1 1h3.5M1 1v3.5M9 9H5.5M9 9V5.5" stroke="#0a4a0a" strokeWidth="1.5" strokeLinecap="round" />
-              }
-            </svg>
-          </button>
+              <svg
+                className="opacity-0 group-hover:opacity-100 transition-opacity"
+                width="6"
+                height="6"
+                viewBox="0 0 10 10"
+                fill="none"
+              >
+                {isMaximized
+                  ? <path d="M3 1L9 1M9 1V7M1 9L7 3" stroke="#0a4a0a" strokeWidth="1.5" strokeLinecap="round" />
+                  : <path d="M1 1h3.5M1 1v3.5M9 9H5.5M9 9V5.5" stroke="#0a4a0a" strokeWidth="1.5" strokeLinecap="round" />
+                }
+              </svg>
+            </button>
+          )}
         </div>
 
         {/* Centered name — absolutely positioned so it's truly centred */}
@@ -348,7 +415,7 @@ export default function PortfolioWindow({
               {getInitials(person.name)}
             </div>
             <h3
-              className="font-semibold text-sm"
+              className="font-semibold text-xs sm:text-sm"
               style={{ color: "#2a4a6a" }}
             >
               {person.name}
@@ -361,11 +428,12 @@ export default function PortfolioWindow({
       {/* Profile toggle */}
       <button
         onClick={() => setProfileExpanded(!profileExpanded)}
-        className="w-full px-5 py-2.5 flex items-center justify-between cursor-pointer transition-colors duration-200 shrink-0"
+        className="w-full px-4 sm:px-5 py-2.5 min-h-11 flex items-center justify-between cursor-pointer transition-colors duration-200 shrink-0"
         style={{
           background: profileExpanded ? "#c8d8e8" : "#d4e0ec",
           borderBottom: "1px solid #b8c8d8",
         }}
+        aria-expanded={profileExpanded}
       >
         <span className="text-sm font-medium" style={{ color: "#4a6a8a" }}>
           Profile & Socials
@@ -471,7 +539,7 @@ export default function PortfolioWindow({
       >
         <button
           onClick={() => setActiveTab("current")}
-          className="px-4 py-2 rounded-t-lg text-sm font-medium transition-all duration-200 cursor-pointer"
+          className="px-3 sm:px-4 py-2 min-h-11 rounded-t-lg text-sm font-medium transition-all duration-200 cursor-pointer"
           style={{
             background: activeTab === "current" ? "#ffffff" : "transparent",
             border:
@@ -489,7 +557,7 @@ export default function PortfolioWindow({
         </button>
         <button
           onClick={() => setActiveTab("past")}
-          className="px-4 py-2 rounded-t-lg text-sm font-medium transition-all duration-200 cursor-pointer"
+          className="px-3 sm:px-4 py-2 min-h-11 rounded-t-lg text-sm font-medium transition-all duration-200 cursor-pointer"
           style={{
             background: activeTab === "past" ? "#ffffff" : "transparent",
             border:
@@ -515,7 +583,7 @@ export default function PortfolioWindow({
 
       {/* Projects list */}
       <div
-        className="flex-1 overflow-y-auto p-4 flex flex-col gap-3"
+        className="flex-1 overflow-y-auto p-3 sm:p-4 flex flex-col gap-3"
         style={{ background: "#dce6f0" }}
       >
         {projects.length === 0 ? (
@@ -538,6 +606,7 @@ export default function PortfolioWindow({
       </div>
 
       {/* Resize handle */}
+      {!isMobile && !isMaximized && (
       <div
         className="absolute bottom-0 right-0 w-5 h-5 cursor-se-resize"
         style={{ zIndex: 10 }}
@@ -558,6 +627,7 @@ export default function PortfolioWindow({
           />
         </svg>
       </div>
+      )}
     </div>
   );
 }

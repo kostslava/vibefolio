@@ -18,6 +18,11 @@ const redCursor = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/
 const yellowCursor = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16'%3E%3Ccircle cx='6' cy='6' r='5' fill='%23febc2e' stroke='%23a07800' stroke-width='1.2'/%3E%3C/svg%3E") 6 6, pointer`;
 const greenCursor = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16'%3E%3Ccircle cx='6' cy='6' r='5' fill='%2328c840' stroke='%23107a22' stroke-width='1.2'/%3E%3C/svg%3E") 6 6, pointer`;
 
+const MOBILE_BREAKPOINT = 768;
+const MOBILE_GUTTER = 0;
+const MOBILE_TOP = 64;
+const MOBILE_BOTTOM_OFFSET = 0;
+
 export function getProjectFaviconUrl(url: string): string {
   try { return `https://www.google.com/s2/favicons?domain=${new URL(url).hostname}&sz=48`; } catch { return ""; }
 }
@@ -34,21 +39,45 @@ export default function ProjectWindow({
   zIndex,
   onFocus,
 }: ProjectWindowProps) {
+  const [viewport, setViewport] = useState(() => {
+    if (typeof window === "undefined") return { width: 1200, height: 900 };
+    return { width: window.innerWidth, height: window.innerHeight };
+  });
   const [position, setPosition] = useState(() => {
     if (typeof window === "undefined") return { x: 120, y: 120 };
     const vw = window.innerWidth;
     const vh = window.innerHeight;
+    if (vw <= MOBILE_BREAKPOINT) {
+      return { x: MOBILE_GUTTER, y: MOBILE_TOP };
+    }
     return {
       x: Math.max(20, (vw - 800) / 2 + (Math.random() - 0.5) * 100),
       y: Math.max(20, (vh - 560) / 2 + (Math.random() - 0.5) * 80),
     };
   });
-  const [size, setSize] = useState({ width: 800, height: 560 });
+  const [size, setSize] = useState(() => {
+    if (typeof window !== "undefined" && window.innerWidth <= MOBILE_BREAKPOINT) {
+      return {
+        width: Math.max(280, window.innerWidth - MOBILE_GUTTER * 2),
+        height: Math.max(360, window.innerHeight - MOBILE_BOTTOM_OFFSET),
+      };
+    }
+    return { width: 800, height: 560 };
+  });
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const [iframeError, setIframeError] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
   const prevRectRef = useRef<{ x: number; y: number; width: number; height: number } | null>(null);
+  const isMobile = viewport.width <= MOBILE_BREAKPOINT;
+  const mobileFrame = {
+    x: MOBILE_GUTTER,
+    y: MOBILE_TOP,
+    width: viewport.width,
+    height: Math.max(320, viewport.height - MOBILE_TOP - MOBILE_BOTTOM_OFFSET),
+  };
+  const effectivePosition = isMobile && !isMaximized ? { x: mobileFrame.x, y: mobileFrame.y } : position;
+  const effectiveSize = isMobile && !isMaximized ? { width: mobileFrame.width, height: mobileFrame.height } : size;
 
   // Animation state
   const [animState, setAnimState] = useState<AnimState>("idle");
@@ -79,16 +108,34 @@ export default function ProjectWindow({
       }
       setIsMaximized(false);
     } else {
-      prevRectRef.current = { x: position.x, y: position.y, width: size.width, height: size.height };
+      prevRectRef.current = { x: effectivePosition.x, y: effectivePosition.y, width: effectiveSize.width, height: effectiveSize.height };
       setPosition({ x: 0, y: 0 });
       setSize({ width: window.innerWidth, height: window.innerHeight });
       setIsMaximized(true);
     }
-  }, [isMaximized, position, size]);
+  }, [isMaximized, effectivePosition.x, effectivePosition.y, effectiveSize.width, effectiveSize.height]);
+
+  useEffect(() => {
+    const updateViewport = () => {
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      setViewport({ width, height });
+      if (width <= MOBILE_BREAKPOINT && !isMaximized) {
+        setPosition({ x: MOBILE_GUTTER, y: MOBILE_TOP });
+        setSize({
+          width,
+          height: Math.max(320, height - MOBILE_TOP - MOBILE_BOTTOM_OFFSET),
+        });
+      }
+    };
+    updateViewport();
+    window.addEventListener("resize", updateViewport);
+    return () => window.removeEventListener("resize", updateViewport);
+  }, [isMaximized]);
 
   const computeDockTranslate = () => {
     if (typeof window === "undefined") return { x: 0, y: 0 };
-    return { x: window.innerWidth / 2 - (position.x + size.width / 2), y: window.innerHeight - 48 - (position.y + size.height / 2) };
+    return { x: window.innerWidth / 2 - (effectivePosition.x + effectiveSize.width / 2), y: window.innerHeight - 48 - (effectivePosition.y + effectiveSize.height / 2) };
   };
 
   const handleCloseClick = () => {
@@ -124,6 +171,7 @@ export default function ProjectWindow({
 
   const handleMouseDownDrag = useCallback(
     (e: React.MouseEvent) => {
+      if (isMobile || isMaximized) return;
       if ((e.target as HTMLElement).closest("button")) return;
       onFocus();
       setIsDragging(true);
@@ -132,18 +180,19 @@ export default function ProjectWindow({
         y: e.clientY - position.y,
       };
     },
-    [position, onFocus]
+    [position, onFocus, isMobile, isMaximized]
   );
 
   const handleMouseDownResize = useCallback(
     (e: React.MouseEvent) => {
+      if (isMobile || isMaximized) return;
       e.preventDefault();
       e.stopPropagation();
       onFocus();
       setIsResizing(true);
       dragOffset.current = { x: e.clientX, y: e.clientY };
     },
-    [onFocus]
+    [onFocus, isMobile, isMaximized]
   );
 
   useEffect(() => {
@@ -151,17 +200,21 @@ export default function ProjectWindow({
 
     const handleMouseMove = (e: MouseEvent) => {
       if (isDragging) {
+        const nextX = e.clientX - dragOffset.current.x;
+        const nextY = e.clientY - dragOffset.current.y;
+        const maxX = Math.max(0, viewport.width - size.width);
+        const maxY = Math.max(0, viewport.height - size.height);
         setPosition({
-          x: e.clientX - dragOffset.current.x,
-          y: e.clientY - dragOffset.current.y,
+          x: Math.min(Math.max(0, nextX), maxX),
+          y: Math.min(Math.max(0, nextY), maxY),
         });
       }
       if (isResizing) {
         const dx = e.clientX - dragOffset.current.x;
         const dy = e.clientY - dragOffset.current.y;
         setSize((prev) => ({
-          width: Math.max(400, prev.width + dx),
-          height: Math.max(300, prev.height + dy),
+          width: Math.min(Math.max(320, prev.width + dx), viewport.width),
+          height: Math.min(Math.max(300, prev.height + dy), viewport.height),
         }));
         dragOffset.current = { x: e.clientX, y: e.clientY };
       }
@@ -178,26 +231,27 @@ export default function ProjectWindow({
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
     };
-  }, [isDragging, isResizing]);
+  }, [isDragging, isResizing, viewport, size.width, size.height]);
 
   let displayUrl = url;
   try { displayUrl = new URL(url).hostname; } catch { /* keep */ }
 
   return (
     <div
-      className="fixed shadow-2xl flex flex-col overflow-hidden"
+      className={`fixed shadow-2xl flex flex-col overflow-hidden ${isMobile && !isMaximized ? "rounded-none" : ""}`}
       style={{
-        left: position.x,
-        top: position.y,
-        width: size.width,
-        height: size.height,
+        left: effectivePosition.x,
+        top: effectivePosition.y,
+        width: effectiveSize.width,
+        height: effectiveSize.height,
         zIndex,
         background: "#dce6f0",
-        border: "2px solid #8aa0b8",
+        border: isMobile && !isMaximized ? "none" : "2px solid #8aa0b8",
         userSelect: isDragging || isResizing ? "none" : "auto",
         visibility: (minimized && animState === "idle") ? "hidden" : "visible",
         pointerEvents: (minimized && animState === "idle") ? "none" : "auto",
-        borderRadius: isMaximized ? 0 : 16,
+        borderRadius: isMaximized || (isMobile && !isMaximized) ? 0 : 16,
+        boxShadow: isMobile && !isMaximized ? "none" : undefined,
         transition: animState !== "idle" ? undefined
           : isMaximized
             ? "left 0.32s cubic-bezier(0.4,0,0.2,1), top 0.32s cubic-bezier(0.4,0,0.2,1), width 0.32s cubic-bezier(0.4,0,0.2,1), height 0.32s cubic-bezier(0.4,0,0.2,1), border-radius 0.32s"
@@ -208,7 +262,7 @@ export default function ProjectWindow({
     >
       {/* Title bar */}
       <div
-        className="flex items-center gap-3 px-4 py-3 cursor-move shrink-0"
+        className={`flex items-center gap-3 px-3 sm:px-4 py-3 shrink-0 ${isMobile || isMaximized ? "cursor-default" : "cursor-move"}`}
         style={{
           background: "#c0d0e0",
           borderBottom: "1.5px solid #a0b4c8",
@@ -216,13 +270,14 @@ export default function ProjectWindow({
         onMouseDown={handleMouseDownDrag}
       >
         {/* macOS traffic lights */}
-        <div className="flex items-center gap-1.5 shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
           {/* Red — close */}
           <button
             onClick={handleCloseClick}
-            className="group w-3.5 h-3.5 rounded-full flex items-center justify-center transition-opacity duration-150 cursor-pointer"
+            className={`group rounded-full flex items-center justify-center transition-opacity duration-150 cursor-pointer ${isMobile ? "w-6 h-6" : "w-3.5 h-3.5"}`}
             style={{ background: "#ff5f57", cursor: redCursor }}
             title="Close"
+            aria-label={`Close ${title}`}
           >
             <svg
               className="opacity-0 group-hover:opacity-100 transition-opacity"
@@ -240,35 +295,41 @@ export default function ProjectWindow({
             </svg>
           </button>
           {/* Yellow — minimize */}
-          <button
-            onClick={handleMinimizeClick}
-            className="group w-3.5 h-3.5 rounded-full flex items-center justify-center"
-            style={{ background: "#febc2e", cursor: yellowCursor }}
-            title="Minimize"
-          >
-            <svg className="opacity-0 group-hover:opacity-100 transition-opacity" width="6" height="6" viewBox="0 0 10 10" fill="none">
-              <path d="M1.5 5h7" stroke="#7a5000" strokeWidth="1.8" strokeLinecap="round" />
-            </svg>
-          </button>
+          {!isMobile && (
+            <button
+              onClick={handleMinimizeClick}
+              className="group w-3.5 h-3.5 rounded-full flex items-center justify-center"
+              style={{ background: "#febc2e", cursor: yellowCursor }}
+              title="Minimize"
+              aria-label={`Minimize ${title}`}
+            >
+              <svg className="opacity-0 group-hover:opacity-100 transition-opacity" width="6" height="6" viewBox="0 0 10 10" fill="none">
+                <path d="M1.5 5h7" stroke="#7a5000" strokeWidth="1.8" strokeLinecap="round" />
+              </svg>
+            </button>
+          )}
           {/* Green — maximize / restore */}
-          <button
-            onClick={handleToggleMaximize}
-            className="group w-3.5 h-3.5 rounded-full flex items-center justify-center"
-            style={{ background: "#28c840", cursor: greenCursor }}
-            title={isMaximized ? "Restore" : "Maximise"}
-          >
-            <svg className="opacity-0 group-hover:opacity-100 transition-opacity" width="6" height="6" viewBox="0 0 10 10" fill="none">
-              {isMaximized
-                ? <path d="M3 1L9 1M9 1V7M1 9L7 3" stroke="#0a4a0a" strokeWidth="1.5" strokeLinecap="round" />
-                : <path d="M1 1h3.5M1 1v3.5M9 9H5.5M9 9V5.5" stroke="#0a4a0a" strokeWidth="1.5" strokeLinecap="round" />
-              }
-            </svg>
-          </button>
+          {!isMobile && (
+            <button
+              onClick={handleToggleMaximize}
+              className="group w-3.5 h-3.5 rounded-full flex items-center justify-center"
+              style={{ background: "#28c840", cursor: greenCursor }}
+              title={isMaximized ? "Restore" : "Maximise"}
+              aria-label={isMaximized ? `Restore ${title}` : `Maximize ${title}`}
+            >
+              <svg className="opacity-0 group-hover:opacity-100 transition-opacity" width="6" height="6" viewBox="0 0 10 10" fill="none">
+                {isMaximized
+                  ? <path d="M3 1L9 1M9 1V7M1 9L7 3" stroke="#0a4a0a" strokeWidth="1.5" strokeLinecap="round" />
+                  : <path d="M1 1h3.5M1 1v3.5M9 9H5.5M9 9V5.5" stroke="#0a4a0a" strokeWidth="1.5" strokeLinecap="round" />
+                }
+              </svg>
+            </button>
+          )}
         </div>
 
         {/* Address bar */}
         <div
-          className="flex-1 flex items-center gap-2 px-3 py-1 rounded-lg overflow-hidden"
+          className="flex-1 flex items-center gap-2 px-2 sm:px-3 py-1 rounded-lg overflow-hidden min-w-0"
           style={{
             background: "#d8e4f0",
             border: "1px solid #b0c4d8",
@@ -298,7 +359,7 @@ export default function ProjectWindow({
 
         {/* Title */}
         <span
-          className="text-sm font-medium truncate shrink-0 max-w-[160px]"
+          className="text-xs sm:text-sm font-medium truncate shrink-0 max-w-[110px] sm:max-w-[160px]"
           style={{ color: "#2a4a6a" }}
         >
           {title}
@@ -357,6 +418,7 @@ export default function ProjectWindow({
       </div>
 
       {/* Resize handle */}
+      {!isMobile && !isMaximized && (
       <div
         className="absolute bottom-0 right-0 w-5 h-5 cursor-se-resize"
         style={{ zIndex: 10 }}
@@ -377,6 +439,7 @@ export default function ProjectWindow({
           />
         </svg>
       </div>
+      )}
     </div>
   );
 }

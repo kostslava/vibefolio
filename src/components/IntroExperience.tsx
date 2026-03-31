@@ -64,20 +64,20 @@ export default function IntroExperience({ onComplete }: IntroExperienceProps) {
       ))}
 
       {/* Main content */}
-      <div className="relative z-10 h-full flex flex-col items-center justify-center px-6">
+      <div className="relative z-10 h-full flex flex-col items-center justify-center px-4 sm:px-6">
         {/* Logo/Title */}
-        <div className="mb-8">
+        <div className="mb-6 sm:mb-8">
           <h1
-            className="text-7xl font-serif italic font-bold mb-4 animate-slideDown"
+            className="text-[clamp(1.9rem,12vw,4.5rem)] font-serif italic font-bold mb-3 sm:mb-4 animate-slideDown text-center leading-[1.15] px-2"
             style={{
               color: "#2a4a6a",
-              textShadow: "3px 3px 0px #c8d8e8",
+              textShadow: "2px 2px 0px #c8d8e8",
             }}
           >
             VIBEFOLIO
           </h1>
           <p
-            className="text-xl text-center animate-fadeIn"
+            className="text-base sm:text-xl text-center animate-fadeIn"
             style={{
               color: "#4a6a8a",
               animationDelay: "0.3s",
@@ -90,14 +90,14 @@ export default function IntroExperience({ onComplete }: IntroExperienceProps) {
         </div>
 
         {/* Animated cards preview */}
-        <div className="flex gap-4 mb-8 animate-fadeIn" style={{ animationDelay: "0.6s", opacity: 0, animationFillMode: "forwards" }}>
+        <div className="flex gap-3 sm:gap-4 mb-6 sm:mb-8 animate-fadeIn" style={{ animationDelay: "0.6s", opacity: 0, animationFillMode: "forwards" }}>
           {[0, 1, 2].map((i) => (
             <div
               key={i}
               className="rounded-2xl transform hover:scale-110 hover:rotate-3 transition-all duration-300 cursor-pointer animate-bounce"
               style={{
-                width: "80px",
-                height: "80px",
+                width: "64px",
+                height: "64px",
                 background: "#c8d8e8",
                 border: "2px solid #a0b4c8",
                 animationDelay: `${i * 0.2 + 0.8}s`,
@@ -110,7 +110,7 @@ export default function IntroExperience({ onComplete }: IntroExperienceProps) {
         {/* Call to action button */}
         <button
           onClick={onComplete}
-          className="group relative px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-300 hover:scale-105 active:scale-95 animate-fadeIn cursor-pointer"
+          className="group relative w-full max-w-xs sm:w-auto px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-semibold text-base sm:text-lg transition-all duration-300 hover:scale-105 active:scale-95 animate-fadeIn cursor-pointer"
           style={{
             background: "#c8d8e8",
             border: "3px solid #a0b4c8",
@@ -132,7 +132,7 @@ export default function IntroExperience({ onComplete }: IntroExperienceProps) {
 
         {/* Hint text */}
         <p
-          className="mt-6 text-sm animate-fadeIn"
+          className="mt-5 sm:mt-6 text-xs sm:text-sm animate-fadeIn text-center"
           style={{
             color: "#6b8dad",
             animationDelay: "1.2s",

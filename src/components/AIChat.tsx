@@ -260,7 +260,7 @@ export default function AIChat({ person }: AIChatProps) {
                 <button
                   onClick={() => handlePreset(btn)}
                   disabled={disabled}
-                  className="w-full flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-lg text-[11px] transition-all duration-150"
+                  className="w-full min-h-11 flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-lg text-[11px] transition-all duration-150"
                   style={{
                     background: disabled ? "#c4d4e4" : "#dce8f4",
                     border: "1px solid #a8bece",
@@ -269,8 +269,10 @@ export default function AIChat({ person }: AIChatProps) {
                     opacity: disabled ? 0.6 : 1,
                   }}
                   title={btn.label}
+                  aria-label={btn.label}
                 >
                   <span style={{ fontSize: 14 }}>{btn.icon}</span>
+                  <span className="text-[10px] leading-none sm:hidden">{btn.label}</span>
                 </button>
                 {!disabled && (
                   /* Tooltip – only shown when not globally busy */

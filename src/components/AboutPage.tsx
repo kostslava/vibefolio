@@ -4,16 +4,16 @@ import React from "react";
 
 export default function AboutPage() {
   return (
-    <div className="max-w-2xl mx-auto mt-12 px-4">
+    <div className="max-w-2xl mx-auto mt-6 sm:mt-12 px-4 pb-6">
       <div
-        className="rounded-2xl p-8"
+        className="rounded-2xl p-5 sm:p-8"
         style={{
           background: "#c8d8e8",
           border: "2px solid #a0b4c8",
         }}
       >
         <h2
-          className="text-2xl font-bold mb-4"
+          className="text-xl sm:text-2xl font-bold mb-4"
           style={{ fontStyle: "italic", fontFamily: "Georgia, serif", color: "#2a4a6a" }}
         >
           About Vibefolio

@@ -16,8 +16,6 @@ function getInitials(name: string): string {
     .toUpperCase();
 }
 
-const LAUNCHER_WIDTH = 340;
-
 export default function SearchLauncher({ people, onOpenPortfolio }: SearchLauncherProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -56,19 +54,20 @@ export default function SearchLauncher({ people, onOpenPortfolio }: SearchLaunch
 
   return (
     <div
-      className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[50]"
-      style={{ width: LAUNCHER_WIDTH }}
+      className="fixed left-1/2 top-[45%] sm:top-1/2 -translate-x-1/2 -translate-y-1/2 z-[50]"
+      style={{ width: "min(92vw, 340px)" }}
     >
       {/* Idle state */}
       {!open && (
         <button
           onClick={openSearch}
-          className="w-full flex items-center gap-3 px-5 py-4 rounded-2xl transition-all duration-200 hover:shadow-lg cursor-pointer"
+          className="w-full min-h-12 flex items-center gap-3 px-4 sm:px-5 py-3 sm:py-4 rounded-2xl transition-all duration-200 hover:shadow-lg cursor-pointer"
           style={{
             background: "#dce6f0",
             border: "2px solid #a0b4c8",
             color: "#8aa0b8",
           }}
+          aria-label="Find and open a portfolio"
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="11" cy="11" r="8" />
@@ -85,7 +84,7 @@ export default function SearchLauncher({ people, onOpenPortfolio }: SearchLaunch
           style={{ background: "#dce6f0", border: "2px solid #8aa0b8" }}
         >
           {/* Input row */}
-          <div className="flex items-center gap-3 px-5 py-4" style={{ borderBottom: "1.5px solid #b8c8d8" }}>
+          <div className="flex items-center gap-3 px-4 sm:px-5 py-3 sm:py-4" style={{ borderBottom: "1.5px solid #b8c8d8" }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8aa0b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="11" cy="11" r="8" />
               <line x1="21" y1="21" x2="16.65" y2="16.65" />
@@ -95,27 +94,29 @@ export default function SearchLauncher({ people, onOpenPortfolio }: SearchLaunch
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search by name or keywords..."
-              className="flex-1 bg-transparent outline-none text-sm"
+              className="flex-1 bg-transparent outline-none text-sm min-h-8"
               style={{ color: "#2a4a6a" }}
+              aria-label="Search portfolios"
             />
             {filtered.length === 1 && (
-              <span className="text-[10px] font-medium" style={{ color: "#4a7a9a" }}>
+              <span className="text-[10px] font-medium hidden sm:inline" style={{ color: "#4a7a9a" }}>
                 ↵ open
               </span>
             )}
             <button
               onClick={() => { setOpen(false); setQuery(""); }}
-              className="text-xs cursor-pointer transition-opacity hover:opacity-70"
+              className="text-xs px-2 py-1 rounded-md cursor-pointer transition-opacity hover:opacity-70"
               style={{ color: "#8aa0b8" }}
+              aria-label="Close search"
             >
-              esc
+              Close
             </button>
           </div>
 
           {/* Results */}
-          <div className="max-h-52 overflow-y-auto">
+          <div className="max-h-[45dvh] sm:max-h-52 overflow-y-auto">
             {filtered.length === 0 ? (
-              <div className="px-5 py-4 text-sm" style={{ color: "#8aa0b8" }}>
+              <div className="px-4 sm:px-5 py-4 text-sm" style={{ color: "#8aa0b8" }}>
                 No people found
               </div>
             ) : (
@@ -123,10 +124,9 @@ export default function SearchLauncher({ people, onOpenPortfolio }: SearchLaunch
                 <button
                   key={person.id}
                   onClick={() => openPerson(person)}
-                  className="w-full flex items-center gap-3 px-5 py-3 transition-colors duration-150 cursor-pointer text-left"
+                  className="w-full min-h-12 flex items-center gap-3 px-4 sm:px-5 py-3 transition-colors duration-150 cursor-pointer text-left hover:bg-[#c8d8e8] focus-visible:bg-[#c8d8e8]"
                   style={{ borderBottom: "1px solid #c8d8e8" }}
-                  onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "#c8d8e8")}
-                  onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "transparent")}
+                  aria-label={`Open ${person.name} portfolio`}
                 >
                   <div
                     className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
